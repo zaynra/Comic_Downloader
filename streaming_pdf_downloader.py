@@ -899,13 +899,20 @@ def get_result_dir(source_dir):
 # ============================================================
 
 class StreamingPDFDownloader:
-    def __init__(self, max_workers=6):
+    def __init__(self, max_workers=6, driver_holder=None):
         self.core = ComicDownloaderCore(max_workers=max_workers)
         self._unknown_counter = 0
         self._cancel_event = threading.Event()
+        self._driver_holder = driver_holder or {}
 
     def cancel(self):
         self._cancel_event.set()
+        driver = self._driver_holder.get("driver")
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
 
     def format_chapter_folder(self, chap_num):
         if chap_num is None or chap_num <= 0:
@@ -1021,6 +1028,7 @@ class StreamingPDFDownloader:
         pdfs_created = []
 
         shared_driver = self.core.get_driver(enable_images=True)
+        self._driver_holder["driver"] = shared_driver
 
         try:
             for idx, (num, url) in enumerate(to_download, 1):

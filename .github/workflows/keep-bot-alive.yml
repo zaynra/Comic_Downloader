@@ -35,6 +35,8 @@ jobs:
           cat notification_config.json
 
       - name: Run bot
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
         run: python -u telegram_bot_listener.py
 
       - name: Upload downloaded comics

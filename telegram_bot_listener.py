@@ -99,14 +99,23 @@ def _default_store():
 
 def load_store():
     with store_lock:
+        default = _default_store()
+
+        if os.environ.get("GITHUB_PAT"):
+            try:
+                from gist_store import load_store as gist_load
+                return gist_load(default)
+            except Exception as e:
+                print(f"[WARN] Gist load gagal, fallback ke lokal: {e}")
+
         if not os.path.exists(STORE_FILE):
-            return _default_store()
+            return default
         try:
             with open(STORE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception:
-            return _default_store()
-        base = _default_store()
+            return default
+        base = default
         base.update({k: v for k, v in data.items() if k in base})
         base["settings"] = {**DEFAULT_SETTINGS, **data.get("settings", {})}
         return base
@@ -114,6 +123,13 @@ def load_store():
 
 def save_store(store):
     with store_lock:
+        if os.environ.get("GITHUB_PAT"):
+            try:
+                from gist_store import save_store as gist_save
+                gist_save(store)
+            except Exception as e:
+                print(f"[WARN] Gist save gagal: {e}")
+
         try:
             with open(STORE_FILE, "w", encoding="utf-8") as f:
                 json.dump(store, f, indent=2, ensure_ascii=False)
@@ -780,12 +796,12 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
     title = _guess_title(url)
 
     if also_convert:
-        _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers)
+        _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder)
     else:
         _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder)
 
 
-def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers):
+def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder):
     """Streaming mode: download -> convert -> send PDF -> delete images, per chapter."""
     from streaming_pdf_downloader import StreamingPDFDownloader
 
@@ -793,7 +809,7 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
     result_dir = os.path.join(base_folder, "Result")
     os.makedirs(result_dir, exist_ok=True)
 
-    streamer = StreamingPDFDownloader(max_workers=max_workers)
+    streamer = StreamingPDFDownloader(max_workers=max_workers, driver_holder=driver_holder)
 
     def _bridge_cancel():
         while not job_cancel_event.is_set():
