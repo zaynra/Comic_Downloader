@@ -1171,6 +1171,12 @@ class StreamingPDFDownloader:
         print(f"Folder   : {result_dir}")
         print(f"{'='*50}")
 
+        all_pdfs = []
+        if os.path.isdir(result_dir):
+            for f in sorted(os.listdir(result_dir)):
+                if f.lower().endswith(".pdf"):
+                    all_pdfs.append(os.path.join(result_dir, f))
+
         try:
             bot.finish(title, len(to_download), success_count, failed_count, durasi)
         except Exception:
@@ -1178,7 +1184,7 @@ class StreamingPDFDownloader:
 
         return {
             "total": len(to_download), "success": success_count, "failed": failed_count,
-            "cancelled": cancelled_flag, "pdfs": pdfs_created,
+            "cancelled": cancelled_flag, "pdfs": all_pdfs,
         }
 
 
