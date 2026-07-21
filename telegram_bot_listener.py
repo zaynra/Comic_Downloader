@@ -826,28 +826,21 @@ def real_time_progress_callback(chat_id, msg_id):
 
 def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
     settings = load_store()["settings"]
-    also_convert = also_convert or settings["auto_convert_pdf"]
     max_workers = 10 if settings["parallel_download"] else 4
 
-    job_type = "download_pdf" if also_convert else "download"
     driver_holder = {}
     with job_state_lock:
         job_state.update({
-            "active": True, "job_type": job_type, "activity": "Downloading",
+            "active": True, "job_type": "download_pdf", "activity": "Downloading",
             "start_time": time.time(), "msg_id": msg_id,
             "completed": 0, "total": 0, "driver_holder": driver_holder,
         })
 
     job_cancel_event.clear()
-    title = _guess_title(url)
-
-    if also_convert:
-        _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder)
-    else:
-        _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder)
+    _run_streaming_task(chat_id, url, start, end, msg_id, settings, max_workers, driver_holder)
 
 
-def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder):
+def _run_streaming_task(chat_id, url, start, end, msg_id, settings, max_workers, driver_holder):
     """Streaming mode: download -> convert -> send PDF -> delete images, per chapter."""
     from streaming_pdf_downloader import StreamingPDFDownloader
 
@@ -881,15 +874,16 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
             send_or_edit(chat_id, text, markup, msg_id)
 
     try:
+        temp_title = _guess_title(url)
         send_or_edit(
             chat_id,
-            format_header("📥 Download + Convert...") + f"Komik\n{title}\n\nMode: Streaming (download -> convert -> kirim per chapter)",
+            format_header("📥 Download + Convert...") + f"Komik\n{temp_title}\n\nMode: Streaming (download -> convert -> kirim per chapter)",
             None, msg_id,
         )
 
         stats = streamer.run(url, start, end, base_dir=settings["base_dir"], progress_callback=progress_bridge)
 
-        real_title = stats.get("title", title)
+        real_title = stats.get("title", temp_title)
         base_folder = os.path.join(settings["base_dir"], real_title)
         print(f"[DEBUG] Streaming selesai. Title={real_title!r}, PDFs={len(stats.get('pdfs', []))}")
 

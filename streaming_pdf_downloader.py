@@ -329,10 +329,29 @@ class GenericSiteAdapter:
             return []
 
         driver.execute_script("""
+            // Force-load all lazy images
             document.querySelectorAll('img').forEach(img => {
-                let src = img.dataset.src || img.dataset.lazySrc || img.dataset.original || img.srcset?.split(' ')[0] || img.src;
-                if (src) img.src = src;
+                let src = img.dataset.src || img.dataset.lazySrc || img.dataset.original
+                       || img.dataset.lazy || img.dataset.url
+                       || (img.srcset && img.srcset.split(' ')[0])
+                       || img.src;
+                if (src && src !== img.src) {
+                    img.src = src;
+                    img.removeAttribute('loading');
+                    img.removeAttribute('data-src');
+                    img.removeAttribute('data-lazy-src');
+                    img.removeAttribute('data-original');
+                }
             });
+
+            // Trigger IntersectionObserver for lazy-loading libraries
+            if (typeof IntersectionObserver !== 'undefined') {
+                document.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
+                    img.scrollIntoView();
+                });
+            }
+
+            // Remove tiny images (icons, emojis, etc.)
             document.querySelectorAll('img').forEach(img => {
                 if (img.classList.contains('emoji') || img.classList.contains('wp-smiley')) {
                     img.remove();
@@ -344,7 +363,7 @@ class GenericSiteAdapter:
                 }
             });
         """)
-        time.sleep(2.5)
+        time.sleep(3)
 
         if cancel_event and cancel_event.is_set():
             return []
