@@ -386,17 +386,29 @@ def show_download_menu(chat_id, msg_id):
 def show_range_prompt(chat_id, msg_id, data):
     text = format_header("📑 Pilih Range Chapter")
     text += f"Judul\n{data.get('title', '-')}\n\n"
+
+    last_ch = data.get("last_chapter", 0)
+    downloaded = data.get("downloaded_count", 0)
+
+    if downloaded > 0:
+        text += f"📥 Sudah terdownload: {downloaded} chapter (sampai chapter {last_ch:g})\n"
+        text += f"💡 Ketik {int(last_ch) + 1} untuk lanjut dari chapter terakhir\n\n"
+    else:
+        text += "📥 Belum ada chapter terdownload\n\n"
+
     text += "Ketik salah satu format berikut sebagai pesan:\n"
     text += "  • 12          -> chapter 12 saja\n"
     text += "  • 12-45       -> chapter 12 sampai 45\n"
     text += "  • all         -> semua chapter (default lama)\n\n"
     text += "Atau tekan tombol di bawah untuk langsung ambil semua."
-    markup = {
-        "inline_keyboard": [
-            [{"text": "📦 Semua Chapter", "callback_data": "dl_range_all"}],
-            [{"text": "❌ Batal", "callback_data": "nav_main"}]
-        ]
-    }
+
+    buttons = [[{"text": "📦 Semua Chapter", "callback_data": "dl_range_all"}]]
+    if last_ch > 0:
+        next_ch = int(last_ch) + 1
+        buttons.insert(0, [{"text": f"▶️ Lanjut dari Chapter {next_ch}", "callback_data": f"dl_range_start_{next_ch}"}])
+    buttons.append([{"text": "❌ Batal", "callback_data": "nav_main"}])
+
+    markup = {"inline_keyboard": buttons}
     st = get_state(chat_id)
     st["state"] = "WAIT_RANGE"
     st["data"] = data
@@ -690,7 +702,7 @@ def handle_url_input(chat_id, url):
         show_download_menu(chat_id, msg_id)
         return
 
-    send_or_edit(chat_id, format_header("Menganalisis URL...") + "Sedang membaca judul...", msg_id=msg_id)
+    send_or_edit(chat_id, format_header("Menganalisis URL...") + "Sedang membaca judul dan cek progress...", msg_id=msg_id)
 
     try:
         title = _guess_title(url)
@@ -705,7 +717,25 @@ def handle_url_input(chat_id, url):
         set_state(chat_id, "IDLE")
         return
 
-    begin_range_selection(chat_id, msg_id, url, title)
+    settings = load_store()["settings"]
+    base_dir = settings["base_dir"]
+    completed_nums = set()
+    last_chapter = 0
+    total_downloaded = 0
+
+    try:
+        downloader = UniversalComicDownloader()
+        completed_nums = downloader.detect_existing_progress(url, komik_root=base_dir)
+        if completed_nums:
+            sorted_nums = sorted(completed_nums)
+            last_chapter = sorted_nums[-1]
+            total_downloaded = len(sorted_nums)
+    except Exception as e:
+        print(f"[WARN] Gagal detect progress: {e}")
+
+    data = {"url": url, "title": title, "last_chapter": last_chapter, "downloaded_count": total_downloaded}
+    set_last_url(url, title)
+    show_range_prompt(chat_id, msg_id, data)
 
 
 RANGE_SINGLE = re.compile(r'^\s*(\d+(?:\.\d+)?)\s*$')
@@ -1161,6 +1191,16 @@ def dispatch(update):
             state = get_state(chat_id)
             d = state.get("data", {})
             d["start"], d["end"] = 1, 9999
+            set_state(chat_id, "WAIT_CONFIRM", msg_id=msg_id, data=d)
+            show_download_confirm(chat_id, msg_id, d)
+
+        elif data.startswith("dl_range_start_"):
+            answer_cq(cq_id)
+            start_num = int(data.replace("dl_range_start_", ""))
+            state = get_state(chat_id)
+            d = state.get("data", {})
+            d["start"] = start_num
+            d["end"] = 9999
             set_state(chat_id, "WAIT_CONFIRM", msg_id=msg_id, data=d)
             show_download_confirm(chat_id, msg_id, d)
 
