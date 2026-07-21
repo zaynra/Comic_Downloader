@@ -1124,6 +1124,7 @@ class StreamingPDFDownloader:
 
                     if os.path.isfile(output_path):
                         print(f"      PDF sudah ada, skip convert")
+                        pdfs_created.append(output_path)
                     else:
                         print(f"      Converting ke PDF...")
                         ok = convert_chapter_to_pdf(folder, output_path)
@@ -1171,12 +1172,6 @@ class StreamingPDFDownloader:
         print(f"Folder   : {result_dir}")
         print(f"{'='*50}")
 
-        all_pdfs = []
-        if os.path.isdir(result_dir):
-            for f in sorted(os.listdir(result_dir)):
-                if f.lower().endswith(".pdf"):
-                    all_pdfs.append(os.path.join(result_dir, f))
-
         try:
             bot.finish(title, len(to_download), success_count, failed_count, durasi)
         except Exception:
@@ -1184,7 +1179,7 @@ class StreamingPDFDownloader:
 
         return {
             "total": len(to_download), "success": success_count, "failed": failed_count,
-            "cancelled": cancelled_flag, "pdfs": all_pdfs,
+            "cancelled": cancelled_flag, "pdfs": pdfs_created,
         }
 
 
