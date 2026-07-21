@@ -974,15 +974,17 @@ def main():
     offset = load_offset() or 0
     print("[INFO] Telegram Bot UI Inline Keyboard Berjalan.")
     notifier = TelegramNotifier()
-    now = datetime.now().strftime("%H:%M:%S")
-    notifier.send(
-        f"🤖 <b>Telegram Listener Active</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"📡 <b>Status</b>\n"
-        f"   Bot Active\n\n"
-        f"🕐 <b>Time</b>\n"
-        f"   {now}"
-    )
+    if notifier.enabled and notifier.chat_id:
+        text = format_header("📚 Comic Downloader") + "Bot aktif. Silakan pilih menu."
+        markup = {
+            "inline_keyboard": [
+                [{"text": "📥 Download Comic", "callback_data": "nav_download"}],
+                [{"text": "📚 Library", "callback_data": "nav_library"}, {"text": "📊 Status", "callback_data": "nav_status"}],
+                [{"text": "⚙️ Settings", "callback_data": "nav_settings"}, {"text": "❌ Exit", "callback_data": "nav_exit"}]
+            ]
+        }
+        url = f"{API_URL}/sendMessage"
+        requests.post(url, json={"chat_id": notifier.chat_id, "text": text, "reply_markup": markup, "parse_mode": "HTML"})
     try:
         while True:
             try:
