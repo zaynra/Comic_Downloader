@@ -891,21 +891,33 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
 
         real_title = stats.get("title", title)
         base_folder = os.path.join(settings["base_dir"], real_title)
+        print(f"[DEBUG] Streaming selesai. Title={real_title!r}, PDFs={len(stats.get('pdfs', []))}")
 
         pdfs_sent = 0
-        if stats.get("pdfs"):
+        pdfs = stats.get("pdfs", [])
+        if pdfs:
             with job_state_lock:
                 job_state["activity"] = "Sending"
-            for pdf_path in stats["pdfs"]:
+            for pdf_path in pdfs:
                 if job_cancel_event.is_set():
                     break
+                exists = os.path.isfile(pdf_path)
+                size = os.path.getsize(pdf_path) if exists else 0
+                print(f"[DEBUG] PDF: {pdf_path} exists={exists} size={size}")
+                if not exists:
+                    print(f"[WARN] File tidak ditemukan, skip: {pdf_path}")
+                    continue
                 chap_name = os.path.splitext(os.path.basename(pdf_path))[0]
-                if send_pdf_to_telegram(chat_id, pdf_path, f"📖 {real_title} - {chap_name}"):
+                result = send_pdf_to_telegram(chat_id, pdf_path, f"📖 {real_title} - {chap_name}")
+                print(f"[DEBUG] send_pdf_to_telegram result: {result}")
+                if result:
                     pdfs_sent += 1
                     try:
                         os.remove(pdf_path)
                     except Exception:
                         pass
+        else:
+            print(f"[WARN] Tidak ada PDF untuk dikirim!")
 
         if os.path.isdir(base_folder):
             for folder_name in os.listdir(base_folder):
