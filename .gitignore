@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+bot_store.json
+telegram_listener_offset.txt
+listener_crash.log
+junk_signatures.json
+.vscode/
+Komik/
+merged_sources/
+enhanced_images/
+source/
+comics/
+*.epub
+*.pdf
+notification_config.json

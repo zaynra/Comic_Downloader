@@ -1,0 +1,1063 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EPUB MTL Fixer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0f1117;
+    --surface:  #171b26;
+    --surface2: #1e2333;
+    --border:   #2a2f45;
+    --accent:   #7c6af7;
+    --accent2:  #a78bfa;
+    --green:    #34d399;
+    --red:      #f87171;
+    --yellow:   #fbbf24;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  header span { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Left Panel ── */
+  .left {
+    width: 340px;
+    min-width: 340px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    padding: 16px 20px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Drop zone */
+  #dropzone {
+    margin: 16px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  #dropzone:hover, #dropzone.drag { border-color: var(--accent); background: rgba(124,106,247,0.06); }
+  #dropzone .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  #dropzone p { font-size: 13px; color: var(--muted); }
+  #dropzone p strong { color: var(--text); }
+  #file-input { display: none; }
+
+  /* Chapter list */
+  #chapter-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  #chapter-list::-webkit-scrollbar { width: 4px; }
+  #chapter-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .ch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    font-size: 12.5px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    user-select: none;
+  }
+  .ch-item:hover { background: var(--surface2); }
+  .ch-item.active { border-left-color: var(--accent); background: rgba(124,106,247,0.08); }
+  .ch-item .ch-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0;
+  }
+  .ch-item.done .ch-status { background: var(--green); }
+  .ch-item.processing .ch-status { background: var(--yellow); animation: pulse 1s infinite; }
+  .ch-item.error .ch-status { background: var(--red); }
+  .ch-item .ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ch-item .ch-num { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Bottom controls */
+  .left-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .stat-box .val { font-size: 18px; font-weight: 600; font-family: var(--mono); color: var(--accent2); }
+  .stat-box .lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .progress-bar {
+    height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px; transition: width .4s;
+    width: 0%;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #6d5ce6);
+    color: #fff;
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Right Panel ── */
+  .right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .editor-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .editor-header .ch-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .editor-header .badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .badge-pending  { background: rgba(100,116,139,0.2); color: var(--muted); }
+  .badge-done     { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-proc     { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge-error    { background: rgba(248,113,113,0.15); color: var(--red); }
+
+  .diff-view {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+  .diff-pane {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .diff-pane:last-child { border-right: none; }
+  .diff-pane-header {
+    padding: 8px 16px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .diff-pane-header.original { color: var(--red); }
+  .diff-pane-header.fixed    { color: var(--green); }
+  .diff-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--mono);
+    color: #c4cfe4;
+  }
+  .diff-content::-webkit-scrollbar { width: 4px; }
+  .diff-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 48px; opacity: 0.3; }
+  .empty-state p { font-size: 14px; }
+  .empty-state small { font-size: 12px; opacity: 0.7; }
+
+  /* Config panel */
+  .config-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .config-row label { flex-shrink: 0; width: 75px; }
+  .config-row select, .config-row input[type=number], .config-row input[type=password] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+  }
+  .config-row select:focus, .config-row input[type=number]:focus, .config-row input[type=password]:focus {
+    border-color: var(--accent);
+  }
+
+  /* Key helper block */
+  #key-helper {
+    background: rgba(124, 106, 247, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  /* Log */
+  #log-area {
+    height: 100px;
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 8px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  #log-area::-webkit-scrollbar { width: 4px; }
+  #log-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .log-line { margin-bottom: 2px; }
+  .log-ok   { color: var(--green); }
+  .log-err  { color: var(--red); }
+  .log-info { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📚</div>
+  <h1>EPUB MTL Fixer <span>— Claude & Gemini local editor</span></h1>
+</header>
+
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="panel-title">Chapters</div>
+
+    <div id="dropzone">
+      <div class="drop-icon">📂</div>
+      <p><strong>Drop EPUB here</strong></p>
+      <p>or click to browse</p>
+    </div>
+    <input type="file" id="file-input" accept=".epub"/>
+
+    <div id="chapter-list"></div>
+
+    <div class="left-footer">
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="val" id="stat-total">0</div>
+          <div class="lbl">Chapters</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="stat-done">0</div>
+          <div class="lbl">Fixed</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="stat-err">0</div>
+          <div class="lbl">Errors</div>
+        </div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+
+      <div class="config-row">
+        <label>Provider:</label>
+        <select id="api-provider" style="flex: 1; min-width: 0;">
+          <option value="gemini" selected>Google Gemini (Free Key)</option>
+          <option value="anthropic">Anthropic Claude</option>
+          <option value="local">Local Clean (No Key Required)</option>
+        </select>
+      </div>
+
+      <div class="config-row" id="key-row">
+        <label>API Key:</label>
+        <input type="password" id="api-key" placeholder="Paste key here..." style="flex: 1; min-width: 0;" />
+      </div>
+
+      <div class="config-row">
+        <label>Model:</label>
+        <select id="api-model" style="flex: 1; min-width: 0;"></select>
+      </div>
+
+      <div class="config-row">
+        <label>Concurrency:</label>
+        <input type="number" id="concurrency" value="2" min="1" max="5" style="width: 45px;"/>
+        <label style="margin-left: 4px; width: auto;">Style:</label>
+        <select id="fix-style" style="flex: 1; min-width: 0;">
+          <option value="light">Light (grammar only)</option>
+          <option value="natural" selected>Natural (recommended)</option>
+          <option value="literary">Literary (enhance prose)</option>
+        </select>
+      </div>
+
+      <div id="key-helper"></div>
+
+      <button class="btn btn-primary" id="btn-start" disabled>▶ Start Fixing</button>
+      <button class="btn btn-secondary" id="btn-download" disabled>⬇ Download Fixed EPUB</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="editor-header">
+      <div class="ch-title" id="view-title">No chapter selected</div>
+      <div class="badge badge-pending" id="view-badge">Pending</div>
+    </div>
+
+    <div id="main-view" class="empty-state">
+      <div class="icon">📖</div>
+      <p>Load an EPUB to begin</p>
+      <small>Drop a file on the left panel, then click "Start Fixing"</small>
+    </div>
+
+    <div id="log-area"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+var epubZip       = null;
+var originalZip   = null;   // raw JSZip of loaded epub
+var chapters      = [];     // [{id, filename, title, originalHtml, fixedHtml, status}]
+var selectedIdx   = -1;
+var isRunning     = false;
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+var dropzone    = document.getElementById('dropzone');
+var fileInput   = document.getElementById('file-input');
+var chapterList = document.getElementById('chapter-list');
+var btnStart    = document.getElementById('btn-start');
+var btnDownload = document.getElementById('btn-download');
+var progressFill= document.getElementById('progress-fill');
+var logArea     = document.getElementById('log-area');
+var mainView    = document.getElementById('main-view');
+var viewTitle   = document.getElementById('view-title');
+var viewBadge   = document.getElementById('view-badge');
+var statTotal   = document.getElementById('stat-total');
+var statDone    = document.getElementById('stat-done');
+var statErr     = document.getElementById('stat-err');
+var apiKeyInput = document.getElementById('api-key');
+var apiProvider = document.getElementById('api-provider');
+var apiModel    = document.getElementById('api-model');
+var keyRow      = document.getElementById('key-row');
+var keyHelper   = document.getElementById('key-helper');
+
+// ─── Multi-Provider Configuration ──────────────────────────────────────────
+var modelsByProvider = {
+  gemini: [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Balanced)' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (Fast & Cheap)' },
+    { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Newest / Agentic)' }
+  ],
+  anthropic: [
+    { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku' }
+  ],
+  local: [
+    { value: 'local-cleaner', label: 'Local Clean (Format & Punctuation)' }
+  ]
+};
+
+function updateModelDropdown() {
+  var provider = apiProvider.value;
+  apiModel.innerHTML = '';
+  
+  var list = modelsByProvider[provider] || [];
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    var opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    apiModel.appendChild(opt);
+  }
+
+  if (provider === 'local') {
+    keyRow.style.display = 'none';
+    keyHelper.style.display = 'none';
+    btnStart.disabled = chapters.length === 0;
+  } else {
+    keyRow.style.display = 'flex';
+    keyHelper.style.display = 'block';
+    
+    if (provider === 'gemini') {
+      keyHelper.innerHTML = '\
+        <span style="color: var(--accent2); font-weight: 600;">💡 Get a Free Key:</span><br>\
+        1. Open <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent2); text-decoration: underline;">Google AI Studio</a>.<br>\
+        2. Click <strong>"Get API Key"</strong> (100% free, no credit card required).<br>\
+        3. Paste it above to process chapters for free.\
+      ';
+    } else if (provider === 'anthropic') {
+      keyHelper.innerHTML = '\
+        <span style="color: var(--accent2); font-weight: 600;">🔑 Anthropic Claude Key:</span><br>\
+        Requires a paid Anthropic Console account API key.\
+      ';
+    }
+  }
+}
+
+// ─── LocalStorage Key Management ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  updateModelDropdown();
+  
+  var savedGeminiKey = localStorage.getItem('epub_mtl_fixer_key_gemini');
+  var savedAnthropicKey = localStorage.getItem('epub_mtl_fixer_key_anthropic');
+
+  if (apiProvider.value === 'gemini' && savedGeminiKey) {
+    apiKeyInput.value = savedGeminiKey;
+  } else if (apiProvider.value === 'anthropic' && savedAnthropicKey) {
+    apiKeyInput.value = savedAnthropicKey;
+  }
+});
+
+apiProvider.addEventListener('change', function() {
+  updateModelDropdown();
+  var provider = apiProvider.value;
+  var savedKey = localStorage.getItem('epub_mtl_fixer_key_' + provider);
+  apiKeyInput.value = savedKey ? savedKey : '';
+  apiKeyInput.placeholder = provider === 'gemini' ? 'AI Studio key...' : 'Claude key...';
+});
+
+apiKeyInput.addEventListener('input', function() {
+  var provider = apiProvider.value;
+  if (provider !== 'local') {
+    localStorage.setItem('epub_mtl_fixer_key_' + provider, apiKeyInput.value.trim());
+  }
+});
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+function log(msg, type) {
+  var typeStr = type || '';
+  var d = document.createElement('div');
+  d.className = 'log-line' + (typeStr ? ' log-' + typeStr : '');
+  d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  logArea.appendChild(d);
+  logArea.scrollTop = logArea.scrollHeight;
+}
+
+// ─── Drop / File Load ────────────────────────────────────────────────────────
+dropzone.addEventListener('click', function() { fileInput.click(); });
+dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', function() { dropzone.classList.remove('drag'); });
+dropzone.addEventListener('drop', function(e) {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  var f = e.dataTransfer.files[0];
+  if (f && f.name.indexOf('.epub') !== -1) loadEpub(f);
+  else log('Please drop an .epub file', 'err');
+});
+fileInput.addEventListener('change', function() {
+  if (fileInput.files[0]) loadEpub(fileInput.files[0]);
+});
+
+async function loadEpub(file) {
+  log(`Loading: ${file.name}`, 'info');
+  try {
+    var buf = await file.arrayBuffer();
+    originalZip = await JSZip.loadAsync(buf);
+    await parseEpub(originalZip);
+    log(`Loaded ${chapters.length} chapter(s)`, 'ok');
+    renderChapterList();
+    updateStats();
+    btnStart.disabled = chapters.length === 0;
+  } catch(e) {
+    log('Failed to load EPUB: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+// ─── EPUB Parsing ─────────────────────────────────────────────────────────────
+async function parseEpub(zip) {
+  chapters = [];
+
+  // 1. Read container.xml
+  var containerXml = await zip.file('META-INF/container.xml').async('string');
+  var containerDoc = new DOMParser().parseFromString(containerXml, 'application/xml');
+  var opfPath = containerDoc.querySelector('rootfile').getAttribute('full-path');
+  var opfDir  = opfPath.indexOf('/') !== -1 ? opfPath.split('/').slice(0,-1).join('/') : '';
+
+  // 2. Parse OPF
+  var opfXml = await zip.file(opfPath).async('string');
+  var opfDoc = new DOMParser().parseFromString(opfXml, 'application/xml');
+
+  var idToHref = {};
+  var manifestItems = opfDoc.querySelectorAll('manifest item');
+  for (var i = 0; i < manifestItems.length; i++) {
+    var item = manifestItems[i];
+    idToHref[item.getAttribute('id')] = item.getAttribute('href');
+  }
+
+  var spineRefs = [];
+  var spineItemrefs = opfDoc.querySelectorAll('spine itemref');
+  for (var i = 0; i < spineItemrefs.length; i++) {
+    var ref = spineItemrefs[i];
+    spineRefs.push(ref.getAttribute('idref'));
+  }
+
+  // 3. Load spine HTML
+  for (var i = 0; i < spineRefs.length; i++) {
+    var idref = spineRefs[i];
+    var href  = idToHref[idref];
+    if (!href) continue;
+
+    var fullPath = opfDir ? opfDir + '/' + href : href;
+    var zipFile  = zip.file(fullPath) || zip.file(decodeURIComponent(fullPath));
+    if (!zipFile) { log(`Missing: ${fullPath}`, 'err'); continue; }
+
+    var html = await zipFile.async('string');
+    var title = extractTitle(html, href, i);
+
+    chapters.push({
+      id: idref,
+      filename: fullPath,
+      href: href,
+      title: title,
+      originalHtml: html,
+      fixedHtml: null,
+      status: 'pending'
+    });
+  }
+}
+
+function extractTitle(html, href, idx) {
+  var m = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+         || html.match(/<h[1-3][^>]*>([^<]+)<\/h[1-3]>/i);
+  if (m) return m[1].trim();
+  return href.split('/').pop().replace(/\.[^.]+$/, '') || `Chapter ${idx+1}`;
+}
+
+// ─── Chapter List UI ──────────────────────────────────────────────────────────
+function renderChapterList() {
+  chapterList.innerHTML = '';
+  for (var i = 0; i < chapters.length; i++) {
+    (function(ch, idx) {
+      var el = document.createElement('div');
+      el.className = 'ch-item' + (idx === selectedIdx ? ' active' : '') + ' ' + ch.status;
+      el.innerHTML = '\
+        <div class="ch-status"></div>\
+        <div class="ch-name" title="' + escHtml(ch.title) + '">' + escHtml(ch.title) + '</div>\
+        <div class="ch-num">' + String(idx + 1).padStart(2, '0') + '</div>\
+      ';
+      el.addEventListener('click', function() { selectChapter(idx); });
+      chapterList.appendChild(el);
+    })(chapters[i], i);
+  }
+}
+
+function selectChapter(i) {
+  selectedIdx = i;
+  renderChapterList();
+  showChapterView(i);
+}
+
+function showChapterView(i) {
+  var ch = chapters[i];
+  viewTitle.textContent = ch.title;
+
+  var badgeMap = {
+    pending:    ['badge-pending', 'Pending'],
+    processing: ['badge-proc',    'Processing…'],
+    done:       ['badge-done',    'Fixed'],
+    error:      ['badge-error',   'Error'],
+  };
+  var badge = badgeMap[ch.status] || badgeMap.pending;
+  var cls = badge[0];
+  var label = badge[1];
+  viewBadge.className = 'badge ' + cls;
+  viewBadge.textContent = label;
+
+  var origText = htmlToPlainText(ch.originalHtml);
+  var fixedText = ch.fixedHtml ? htmlToPlainText(ch.fixedHtml) : '';
+
+  mainView.className = '';
+  mainView.style.display = '';
+  mainView.innerHTML = '\
+    <div class="diff-view" style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;border-top:none">\
+      <div class="diff-pane">\
+        <div class="diff-pane-header original">⚠ Original (MTL)</div>\
+        <div class="diff-content">' + escHtml(origText) + '</div>\
+      </div>\
+      <div class="diff-pane">\
+        <div class="diff-pane-header fixed">✓ Fixed</div>\
+        <div class="diff-content">' + (ch.fixedHtml ? escHtml(fixedText) : '<span style="color:var(--muted)">Not processed yet</span>') + '</div>\
+      </div>\
+    </div>\
+  ';
+}
+
+function htmlToPlainText(html) {
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  
+  var stylesAndScripts = tmp.querySelectorAll('style,script');
+  for (var i = 0; i < stylesAndScripts.length; i++) {
+    var el = stylesAndScripts[i];
+    if (el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  }
+  
+  var blocks = tmp.querySelectorAll('p,br,div,h1,h2,h3,h4');
+  for (var j = 0; j < blocks.length; j++) {
+    blocks[j].insertAdjacentText('afterend', '\n');
+  }
+  
+  return (tmp.textContent || tmp.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  var done = 0;
+  var err = 0;
+  for (var i = 0; i < chapters.length; i++) {
+    if (chapters[i].status === 'done') done++;
+    if (chapters[i].status === 'error') err++;
+  }
+  statTotal.textContent = chapters.length;
+  statDone.textContent  = done;
+  statErr.textContent   = err;
+  var pct = chapters.length ? Math.round((done + err) / chapters.length * 100) : 0;
+  progressFill.style.width = pct + '%';
+  btnDownload.disabled = done === 0;
+}
+
+// ─── Offline Local Processing Fallback ───────────────────────────────────────
+function runLocalHeuristicClean(text) {
+  var cleaned = text;
+
+  // Replace typical Asian webnovel formatting with standard quotes
+  cleaned = cleaned.replace(/[「『]/g, '“');
+  cleaned = cleaned.replace(/[」』]/g, '”');
+  cleaned = cleaned.replace(/[【〔]/g, '[');
+  cleaned = cleaned.replace(/[】〕]/g, ']');
+
+  // Strip excessive spaces inside quotes
+  cleaned = cleaned.replace(/“\s+/g, '“');
+  cleaned = cleaned.replace(/\s+”/g, '”');
+
+  // Standardize multiple periods into regular ellipses
+  cleaned = cleaned.replace(/\.{4,}/g, '...');
+  cleaned = cleaned.replace(/…{2,}/g, '...');
+
+  // Simplify triple-punctuation indicators
+  cleaned = cleaned.replace(/!{2,}/g, '!');
+  cleaned = cleaned.replace(/\?{2,}/g, '?');
+
+  // Strip excess double-line breaks
+  cleaned = cleaned.split('\n')
+                   .map(function(line) { return line.trim().replace(/\s+/g, ' '); })
+                   .filter(function(line) { return line.length > 0; })
+                   .join('\n\n');
+
+  return cleaned;
+}
+
+// ─── Fixing Logic ─────────────────────────────────────────────────────────────
+btnStart.addEventListener('click', function() {
+  if (isRunning) return;
+  startFixing();
+});
+
+async function startFixing() {
+  var provider = apiProvider.value;
+  if (provider !== 'local' && !apiKeyInput.value.trim()) {
+    log('Error: API Key is required for cloud translations.', 'err');
+    alert('Please enter your API Key or select "Local Clean" mode.');
+    return;
+  }
+
+  isRunning = true;
+  btnStart.disabled = true;
+  log('Starting MTL processing with provider: [' + provider + ']…', 'info');
+
+  var concurrency = Math.max(1, Math.min(5, parseInt(document.getElementById('concurrency').value) || 2));
+  
+  var pending = [];
+  for (var i = 0; i < chapters.length; i++) {
+    var c = chapters[i];
+    if (c.status === 'pending' || c.status === 'error') {
+      pending.push(c);
+    }
+  }
+
+  for (var i = 0; i < pending.length; i += concurrency) {
+    var batch = pending.slice(i, i + concurrency);
+    var promises = [];
+    for (var j = 0; j < batch.length; j++) {
+      promises.push(fixChapter(batch[j]));
+    }
+    await Promise.all(promises);
+  }
+
+  log('All chapters processed!', 'ok');
+  isRunning = false;
+  btnStart.disabled = false;
+}
+
+async function fixChapter(ch) {
+  var idx = chapters.indexOf(ch);
+  ch.status = 'processing';
+  renderChapterList();
+  if (idx === selectedIdx) showChapterView(idx);
+  log(`Processing: ${ch.title}`);
+
+  try {
+    var provider = apiProvider.value;
+    var model = apiModel.value;
+    var style = document.getElementById('fix-style').value;
+    var originalText = htmlToPlainText(ch.originalHtml);
+
+    var systemPrompt = buildSystemPrompt(style);
+    var userPrompt   = buildUserPrompt(originalText, ch.title);
+
+    var fixedText = '';
+
+    if (provider === 'local') {
+      // Offline Local Mode
+      fixedText = runLocalHeuristicClean(originalText);
+    } else {
+      var apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        throw new Error("Missing API Key.");
+      }
+
+      if (provider === 'gemini') {
+        var url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        var response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: systemPrompt + "\n\n" + userPrompt }]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          var err = await response.json();
+          throw new Error(err.error?.message || response.statusText);
+        }
+
+        var data = await response.json();
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+          fixedText = data.candidates[0].content.parts[0].text.trim();
+        } else {
+          throw new Error("Could not parse output context from Gemini.");
+        }
+
+      } else if (provider === 'anthropic') {
+        var response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: model,
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }]
+          })
+        });
+
+        if (!response.ok) {
+          var err = await response.json();
+          throw new Error(err.error?.message || response.statusText);
+        }
+
+        var data = await response.json();
+        fixedText = data.content[0].text.trim();
+      }
+    }
+
+    ch.fixedHtml = injectFixedText(ch.originalHtml, fixedText);
+    ch.status = 'done';
+    log(`✓ Done: ${ch.title}`, 'ok');
+  } catch(e) {
+    ch.status = 'error';
+    log(`✗ Error [${ch.title}]: ${e.message}`, 'err');
+  }
+
+  renderChapterList();
+  updateStats();
+  if (idx === selectedIdx) showChapterView(idx);
+}
+
+function buildSystemPrompt(style) {
+  var base = `You are a professional light novel and web novel editor. Your task is to fix Machine Translation (MTL) text from Japanese/Korean/Chinese novels translated to English.
+
+RULES:
+- Fix grammar, sentence structure, and awkward MTL phrasing
+- Preserve ALL character names exactly as written
+- Preserve ALL proper nouns (places, skills, items, titles)
+- Preserve the original meaning and plot content completely
+- Do NOT add new content or change events
+- Keep honorifics if present (san, kun, sama, etc.) unless they make no sense
+- Fix broken dialogue formatting — use proper quotation marks "like this"
+- Fix pronoun confusion (he/she/they mixed up from MTL)
+- Remove repetitive filler phrases common in MTL ("I said" repeated excessively, etc.)
+- OUTPUT ONLY the corrected text — no commentary, no notes, no explanations`;
+
+  var styleInstructions = {
+    light: '\n- Make MINIMAL changes — only fix clear grammar errors and broken sentences\n- Preserve the original wording as much as possible',
+    natural: '\n- Rewrite awkward MTL sentences into natural English flow\n- Keep the tone and register of the original (casual/formal/dramatic)',
+    literary: '\n- Improve the prose quality while fixing MTL issues\n- Enhance descriptive passages and make dialogue feel natural and expressive'
+  };
+
+  return base + (styleInstructions[style] || styleInstructions.natural);
+}
+
+function buildUserPrompt(text, chTitle) {
+  return `Fix the MTL translation of this chapter: "${chTitle}"
+
+--- BEGIN MTL TEXT ---
+${text}
+--- END MTL TEXT ---
+
+Output only the corrected English text, preserving paragraph structure.`;
+}
+
+function injectFixedText(originalHtml, fixedText) {
+  var parser = new DOMParser();
+  var doc;
+  var isXml = true;
+  
+  try {
+    doc = parser.parseFromString(originalHtml, 'application/xhtml+xml');
+    if (doc.querySelector('parsererror')) {
+      isXml = false;
+    }
+  } catch (e) {
+    isXml = false;
+  }
+
+  if (!isXml) {
+    doc = parser.parseFromString(originalHtml, 'text/html');
+  }
+
+  var body = doc.querySelector('body') || doc.documentElement;
+  body.querySelectorAll('script').forEach(e => e.remove());
+
+  var paragraphs = fixedText.split(/\n\n+/).filter(function(p) { return p.trim(); });
+  var existingPs = body.querySelectorAll('p');
+
+  if (existingPs.length > 0 && paragraphs.length > 0) {
+    var minLen = Math.min(existingPs.length, paragraphs.length);
+    for (var i = 0; i < minLen; i++) {
+      existingPs[i].textContent = paragraphs[i].trim();
+    }
+    for (var i = minLen; i < existingPs.length; i++) {
+      var extraP = existingPs[i];
+      if (extraP.parentNode) {
+        extraP.parentNode.removeChild(extraP);
+      }
+    }
+    var lastP = existingPs[minLen - 1];
+    var parent = lastP ? lastP.parentNode : body;
+    for (var i = minLen; i < paragraphs.length; i++) {
+      var p;
+      if (isXml) {
+        p = doc.createElementNS('http://www.w3.org/1999/xhtml', 'p');
+      } else {
+        p = doc.createElement('p');
+      }
+      p.textContent = paragraphs[i].trim();
+      parent.appendChild(p);
+    }
+  } else {
+    var innerContent = '';
+    for (var i = 0; i < paragraphs.length; i++) {
+      if (isXml) {
+        innerContent += '<p xmlns="http://www.w3.org/1999/xhtml">' + escHtml(paragraphs[i].trim()) + '</p>\n';
+      } else {
+        innerContent += '<p>' + escHtml(paragraphs[i].trim()) + '</p>\n';
+      }
+    }
+    body.innerHTML = innerContent;
+  }
+
+  if (isXml) {
+    var serializer = new XMLSerializer();
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(doc);
+  } else {
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + doc.documentElement.outerHTML;
+  }
+}
+
+// ─── Download ─────────────────────────────────────────────────────────────────
+btnDownload.addEventListener('click', async function() {
+  if (!originalZip) return;
+  log('Building fixed EPUB…', 'info');
+  try {
+    var newZip = new JSZip();
+
+    var filePromises = [];
+    originalZip.forEach(function(relativePath, zipEntry) {
+      if (!zipEntry.dir) {
+        filePromises.push(
+          zipEntry.async('uint8array').then(function(data) {
+            return { path: relativePath, data: data };
+          })
+        );
+      }
+    });
+    var files = await Promise.all(filePromises);
+
+    var fixedByFilename = {};
+    for (var i = 0; i < chapters.length; i++) {
+      var ch = chapters[i];
+      if (ch.fixedHtml) {
+        fixedByFilename[ch.filename] = ch.fixedHtml;
+      }
+    }
+
+    var mimetypeFile = null;
+    for (var i = 0; i < files.length; i++) {
+      if (files[i].path === 'mimetype') {
+        mimetypeFile = files[i];
+        break;
+      }
+    }
+
+    if (mimetypeFile) {
+      var mtText = new TextDecoder().decode(mimetypeFile.data);
+      newZip.file('mimetype', mtText.trim(), { compression: 'STORE' });
+    }
+
+    for (var i = 0; i < files.length; i++) {
+      var fileItem = files[i];
+      var path = fileItem.path;
+      var data = fileItem.data;
+      if (path === 'mimetype') continue;
+      if (fixedByFilename[path]) {
+        newZip.file(path, fixedByFilename[path]);
+      } else {
+        newZip.file(path, data);
+      }
+    }
+
+    var blob = await newZip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'fixed.epub';
+    a.click();
+    URL.revokeObjectURL(url);
+    log('Download started!', 'ok');
+  } catch(e) {
+    log('Download failed: ' + e.message, 'err');
+  }
+});
+</script>
+</body>
+</html>

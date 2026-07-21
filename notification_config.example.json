@@ -1,0 +1,17 @@
+{
+    "enabled": true,
+
+    "telegram": {
+        "enabled": true,
+        "bot_token": "YOUR_BOT_TOKEN_HERE",
+        "chat_id": "YOUR_CHAT_ID_HERE"
+    },
+
+    "notification": {
+        "notify_start": true,
+        "notify_progress": true,
+        "notify_error": true,
+        "notify_finish": true,
+        "progress_interval": 10
+    }
+}
