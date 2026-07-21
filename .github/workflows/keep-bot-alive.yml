@@ -36,3 +36,14 @@ jobs:
 
       - name: Run bot
         run: python -u telegram_bot_listener.py
+
+      - name: Upload downloaded comics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comics-${{ github.run_id }}
+          path: |
+            Komik/
+            Result/
+          retention-days: 30
+          if-no-files-found: ignore
