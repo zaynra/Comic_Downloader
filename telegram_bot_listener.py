@@ -643,11 +643,14 @@ def _run_download_task(chat_id, url, start, end, msg_id):
             "active": True, "job_type": "download", "activity": "Downloading",
             "start_time": time.time(), "msg_id": msg_id,
             "completed": 0, "total": 0, "driver_holder": driver_holder,
+            "downloader": None,
         })
 
     job_cancel_event.clear()
     callback = real_time_progress_callback(chat_id, msg_id)
     downloader = StreamingPDFDownloader(max_workers=max_workers)
+    with job_state_lock:
+        job_state["downloader"] = downloader
     title = _guess_title(url)
 
     try:
@@ -655,8 +658,7 @@ def _run_download_task(chat_id, url, start, end, msg_id):
             url, start, end,
             progress_callback=callback, send_notifications=settings["notify_download"],
             notify_on_error=settings["notify_error"],
-            cancel_event=job_cancel_event, base_dir=settings["base_dir"],
-            auto_cleanup=settings["auto_cleanup"],
+            base_dir=settings["base_dir"],
         )
 
         if stats.get("cancelled"):
@@ -720,7 +722,10 @@ def stop_active_job():
     sampai chapter itu selesai sendiri."""
     job_cancel_event.set()
     with job_state_lock:
+        downloader = job_state.get("downloader")
         driver = job_state.get("driver_holder", {}).get("driver")
+    if downloader:
+        downloader.cancel()
     if driver:
         try:
             driver.quit()
