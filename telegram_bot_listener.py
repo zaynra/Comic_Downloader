@@ -328,6 +328,7 @@ def show_download_menu(chat_id, msg_id):
     st["state"] = "WAIT_URL"
     if msg_id:
         st["msg_id"] = msg_id
+    print(f"[DEBUG] show_download_menu: state set to WAIT_URL for chat_id={chat_id}")
     send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 
@@ -628,6 +629,7 @@ def begin_range_selection(chat_id, msg_id, url, title):
 
 
 def handle_url_input(chat_id, url):
+    print(f"[DEBUG] handle_url_input dipanggil: chat_id={chat_id} url={url!r}")
     state = get_state(chat_id)
     msg_id = state.get("msg_id")
 
@@ -980,6 +982,7 @@ def dispatch(update):
             show_main_menu(chat_id, msg_id)
         elif data == "nav_download":
             answer_cq(cq_id)
+            print(f"[DEBUG] nav_download ditekan untuk chat_id={chat_id}")
             show_download_menu(chat_id, msg_id)
         elif data == "nav_convert":
             answer_cq(cq_id)
@@ -1251,6 +1254,7 @@ def dispatch(update):
         chat_id = str(msg["chat"]["id"])
         if chat_id != ALLOWED_CHAT_ID: return
         text = msg.get("text", "").strip()
+        print(f"[DEBUG] Pesan diterima chat_id={chat_id} text={text!r}")
 
         try:
             requests.post(f"{API_URL}/deleteMessage", json={"chat_id": chat_id, "message_id": msg["message_id"]}, timeout=5)
@@ -1262,6 +1266,7 @@ def dispatch(update):
             return
 
         state = get_state(chat_id).get("state")
+        print(f"[DEBUG] State saat ini: {state}")
         if state == "WAIT_URL":
             handle_url_input(chat_id, text)
         elif state == "WAIT_RANGE":
@@ -1271,9 +1276,23 @@ def dispatch(update):
 # MAIN LOOP
 # ============================================================
 
+def send_startup_notification():
+    """Kirim pesan ke Telegram sebagai bukti bot aktif."""
+    try:
+        requests.post(
+            f"{API_URL}/sendMessage",
+            json={"chat_id": ALLOWED_CHAT_ID, "text": "✅ Bot aktif! Kirim /start untuk memulai."},
+            timeout=10,
+        )
+        print("[INFO] Notifikasi startup terkirim.")
+    except Exception as e:
+        print(f"[WARN] Gagal kirim notifikasi startup: {e}")
+
+
 def main():
     offset = load_offset() or 0
     print("[INFO] Telegram Bot UI Inline Keyboard Berjalan.")
+    send_startup_notification()
     try:
         while True:
             try:
