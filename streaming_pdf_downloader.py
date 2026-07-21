@@ -1038,6 +1038,17 @@ class StreamingPDFDownloader:
 
     def _get_completed_nums(self, base_folder):
         numbers = set()
+
+        if os.path.isdir(base_folder):
+            for entry in os.listdir(base_folder):
+                if entry in ("Result", ".DS_Store"):
+                    continue
+                entry_path = os.path.join(base_folder, entry)
+                if os.path.isdir(entry_path):
+                    m = re.search(r'(\d+(?:\.\d+)?)', entry)
+                    if m:
+                        numbers.add(float(m.group(1)))
+
         result_dir = os.path.join(base_folder, "Result")
         if os.path.isdir(result_dir):
             for f in os.listdir(result_dir):
@@ -1046,6 +1057,56 @@ class StreamingPDFDownloader:
                     if m:
                         numbers.add(float(m.group(1)))
         return numbers
+
+    @staticmethod
+    def _extract_slug(url):
+        slug = url.rstrip('/').split('/')[-1]
+        slug = urllib.parse.unquote(slug)
+        slug = re.sub(r'-[0-9a-fA-F]{5,}$', '', slug)
+        return slug
+
+    @staticmethod
+    def _normalize(s):
+        return re.sub(r'[^a-z0-9]', '', s.lower())
+
+    @staticmethod
+    def _guess_display_name(slug):
+        words = re.split(r'[-_]+', slug)
+        return " ".join(w.capitalize() for w in words if w)
+
+    def detect_existing_progress(self, series_url, base_dir="Komik"):
+        label_width = 17
+        slug = self._extract_slug(series_url)
+        norm_slug = self._normalize(slug)
+        guessed_name = self._guess_display_name(slug) or slug
+
+        match_folder = None
+        match_name = None
+        if os.path.isdir(base_dir):
+            for name in os.listdir(base_dir):
+                full_path = os.path.join(base_dir, name)
+                if os.path.isdir(full_path) and self._normalize(name) == norm_slug:
+                    match_folder = full_path
+                    match_name = name
+                    break
+
+        display_name = match_name if match_name else guessed_name
+        print(f"{'Comic':<{label_width}}: {display_name}")
+
+        if not match_folder:
+            print(f"{'Status':<{label_width}}: No previous download found.\n")
+            return set()
+
+        chapter_nums = self._get_completed_nums(match_folder)
+
+        if not chapter_nums:
+            print(f"{'Status':<{label_width}}: No previous download found.\n")
+            return set()
+
+        sorted_nums = sorted(chapter_nums)
+        print(f"{'Downloaded':<{label_width}}: {len(sorted_nums)} Chapters")
+        print(f"{'Last Downloaded':<{label_width}}: Chapter {sorted_nums[-1]:g}\n")
+        return chapter_nums
 
     def run(self, series_url, start_ch=1, end_ch=9999,
             progress_callback=None, send_notifications=True,
@@ -1126,6 +1187,7 @@ class StreamingPDFDownloader:
         failed_count = 0
         cancelled_flag = False
         pdfs_created = []
+        success_nums = []
 
         shared_driver = self.core.get_driver(enable_images=True)
 
@@ -1195,6 +1257,7 @@ class StreamingPDFDownloader:
 
                 if ok:
                     success_count += 1
+                    success_nums.append(num)
                     pdfs_created.append(pdf_path)
                     pdf_size = os.path.getsize(pdf_path) / 1048576
                     print(f"  PDF saved : {output_name} ({pdf_size:.1f} MB)")
@@ -1219,7 +1282,7 @@ class StreamingPDFDownloader:
 
         total_size_mb = sum(os.path.getsize(p) / 1048576 for p in pdfs_created if os.path.isfile(p))
 
-        downloaded_nums = sorted([adapter.get_chapter_num(url) for _, url in to_download[:success_count]])
+        downloaded_nums = sorted(success_nums)
         if downloaded_nums:
             first_ch = f"{downloaded_nums[0]:g}"
             last_ch = f"{downloaded_nums[-1]:g}"
@@ -1316,6 +1379,8 @@ if __name__ == "__main__":
         url = "https://" + url
 
     dl = StreamingPDFDownloader()
+
+    dl.detect_existing_progress(url)
 
     start_input = input("Chapter mulai (default 1): ").strip()
     end_input = input("Chapter akhir (default semua): ").strip()
