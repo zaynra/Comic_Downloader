@@ -215,24 +215,29 @@ def log_crash(context, exc):
 # UI HELPERS & FORMATTING
 # ============================================================
 
-def send_or_edit(chat_id, text, reply_markup=None, msg_id=None):
+def send_or_edit(chat_id, text, reply_markup=None, msg_id=None, state=None):
     data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
     if reply_markup:
         data["reply_markup"] = json.dumps(reply_markup)
 
     try:
         if msg_id:
-            data["message_id"] = msg_id
-            resp = requests.post(f"{API_URL}/editMessageText", json=data, timeout=10).json()
-            if not resp.get("ok"):
-                desc = resp.get("description", "")
-                if "message is not modified" not in desc:
-                    print(f"[WARN] editMessageText gagal: {resp}")
-        else:
-            resp = requests.post(f"{API_URL}/sendMessage", json=data, timeout=10).json()
+            edit_data = dict(data)
+            edit_data["message_id"] = msg_id
+            resp = requests.post(f"{API_URL}/editMessageText", json=edit_data, timeout=10).json()
             if resp.get("ok"):
-                return resp["result"]["message_id"]
-            print(f"[WARN] sendMessage gagal: {resp}")
+                return msg_id
+            desc = resp.get("description", "")
+            if "message is not modified" in desc:
+                return msg_id
+            print(f"[WARN] editMessageText gagal, kirim pesan baru: {desc}")
+        resp = requests.post(f"{API_URL}/sendMessage", json=data, timeout=10).json()
+        if resp.get("ok"):
+            new_id = resp["result"]["message_id"]
+            if state is not None:
+                state["msg_id"] = new_id
+            return new_id
+        print(f"[WARN] sendMessage gagal: {resp}")
     except Exception as e:
         print(f"[ERROR] API Telegram: {e}")
     return None
@@ -298,10 +303,13 @@ def show_main_menu(chat_id, msg_id=None):
             [{"text": "⚙️ Settings", "callback_data": "nav_settings"}, {"text": "❌ Exit", "callback_data": "nav_exit"}]
         ]
     }
-    set_state(chat_id, "IDLE", msg_id=msg_id)
-    new_msg_id = send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "IDLE"
+    if msg_id:
+        st["msg_id"] = msg_id
+    new_msg_id = send_or_edit(chat_id, text, markup, msg_id, state=st)
     if not msg_id and new_msg_id:
-        set_state(chat_id, "IDLE", msg_id=new_msg_id)
+        st["msg_id"] = new_msg_id
 
 def show_download_menu(chat_id, msg_id):
     last = get_last_url()
@@ -316,8 +324,11 @@ def show_download_menu(chat_id, msg_id):
             [{"text": "⬅️ Kembali", "callback_data": "nav_main"}]
         ]
     }
-    set_state(chat_id, "WAIT_URL", msg_id=msg_id)
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "WAIT_URL"
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 
 def show_range_prompt(chat_id, msg_id, data):
@@ -334,8 +345,12 @@ def show_range_prompt(chat_id, msg_id, data):
             [{"text": "❌ Batal", "callback_data": "nav_main"}]
         ]
     }
-    set_state(chat_id, "WAIT_RANGE", msg_id=msg_id, data=data)
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "WAIT_RANGE"
+    st["data"] = data
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 
 def show_download_confirm(chat_id, msg_id, data):
@@ -355,7 +370,10 @@ def show_download_confirm(chat_id, msg_id, data):
             [{"text": "⚙️ Advanced", "callback_data": "dl_advanced"}, {"text": "❌ Cancel", "callback_data": "nav_main"}]
         ]
     }
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 def show_advanced_download(chat_id, msg_id):
     parallel_on = get_setting("parallel_download")
@@ -368,7 +386,10 @@ def show_advanced_download(chat_id, msg_id):
             [{"text": "⬅️ Back", "callback_data": "nav_download"}]
         ]
     }
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 def show_status_menu(chat_id, msg_id):
     with job_state_lock:
@@ -394,7 +415,10 @@ def show_status_menu(chat_id, msg_id):
             [{"text": "⬅️ Back", "callback_data": "nav_main"}]
         ]
     }
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 def show_library_menu(chat_id, msg_id):
     base_dir = get_setting("base_dir")
@@ -403,8 +427,11 @@ def show_library_menu(chat_id, msg_id):
     if not comics:
         text = format_header("📚 Library") + f"Belum ada komik yang terdownload di folder {base_dir}/."
         markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "nav_main"}]]}
-        set_state(chat_id, "IDLE", msg_id=msg_id)
-        send_or_edit(chat_id, text, markup, msg_id)
+        st = get_state(chat_id)
+        st["state"] = "IDLE"
+        if msg_id:
+            st["msg_id"] = msg_id
+        send_or_edit(chat_id, text, markup, msg_id, state=st)
         return
 
     text = format_header("📚 Library") + f"{len(comics)} komik terdownload. Pilih untuk melihat detail:"
@@ -415,8 +442,12 @@ def show_library_menu(chat_id, msg_id):
     buttons.append([{"text": "⬅️ Back", "callback_data": "nav_main"}])
     markup = {"inline_keyboard": buttons}
 
-    set_state(chat_id, "WAIT_LIBRARY_PICK", msg_id=msg_id, data={"comics": comics})
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "WAIT_LIBRARY_PICK"
+    st["data"] = {"comics": comics}
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 
 def show_library_detail(chat_id, msg_id, comic_name):
@@ -468,7 +499,10 @@ def show_settings_menu(chat_id, msg_id):
             [{"text": "⬅️ Back", "callback_data": "nav_main"}]
         ]
     }
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 def show_notification_menu(chat_id, msg_id):
     s = load_store()["settings"]
@@ -485,12 +519,18 @@ def show_notification_menu(chat_id, msg_id):
             [{"text": "⬅️ Back", "callback_data": "nav_settings"}]
         ]
     }
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 def show_exit_menu(chat_id, msg_id):
     text = format_header("👋 Terima Kasih") + "Comic Downloader ditutup.\n\nGunakan /start untuk membuka kembali menu."
-    set_state(chat_id, "EXIT", msg_id=msg_id)
-    send_or_edit(chat_id, text, None, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "EXIT"
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, None, msg_id, state=st)
 
 
 def show_convert_menu(chat_id, msg_id):
@@ -500,8 +540,11 @@ def show_convert_menu(chat_id, msg_id):
     if not comics:
         text = format_header("🔄 Convert PDF") + f"Belum ada komik yang terdownload di folder {base_dir}/."
         markup = {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "nav_main"}]]}
-        set_state(chat_id, "IDLE", msg_id=msg_id)
-        send_or_edit(chat_id, text, markup, msg_id)
+        st = get_state(chat_id)
+        st["state"] = "IDLE"
+        if msg_id:
+            st["msg_id"] = msg_id
+        send_or_edit(chat_id, text, markup, msg_id, state=st)
         return
 
     text = format_header("🔄 Convert PDF") + "Pilih komik yang ingin dikonversi ke PDF:"
@@ -512,8 +555,12 @@ def show_convert_menu(chat_id, msg_id):
     buttons.append([{"text": "⬅️ Kembali", "callback_data": "nav_main"}])
     markup = {"inline_keyboard": buttons}
 
-    set_state(chat_id, "WAIT_CONVERT_PICK", msg_id=msg_id, data={"comics": comics})
-    send_or_edit(chat_id, text, markup, msg_id)
+    st = get_state(chat_id)
+    st["state"] = "WAIT_CONVERT_PICK"
+    st["data"] = {"comics": comics}
+    if msg_id:
+        st["msg_id"] = msg_id
+    send_or_edit(chat_id, text, markup, msg_id, state=st)
 
 
 def show_convert_confirm(chat_id, msg_id, comic_name):
