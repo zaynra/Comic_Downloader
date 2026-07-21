@@ -287,8 +287,31 @@ def answer_cq(cq_id, text="", alert=False):
         print(f"[ERROR] answerCallbackQuery gagal: {e}")
 
 def send_pdf_to_telegram(chat_id, file_path, caption=""):
-    """Kirim file PDF ke Telegram user."""
+    """Upload PDF ke Google Drive, kirim link via Telegram."""
     try:
+        from gdrive_upload import get_uploader
+        uploader = get_uploader()
+
+        if uploader._init_service():
+            result = uploader.upload_file(file_path)
+            if result:
+                msg = f"📄 {result['name']} ({result['size_mb']} MB)\n🔗 {result['link']}"
+                if caption:
+                    msg = f"{caption}\n\n{msg}"
+                resp = requests.post(
+                    f"{API_URL}/sendMessage",
+                    json={"chat_id": chat_id, "text": msg, "disable_web_page_preview": True},
+                    timeout=10,
+                ).json()
+                if resp.get("ok"):
+                    print(f"[INFO] PDF uploaded ke Drive & link terkirim: {result['name']}")
+                    return True
+                print(f"[WARN] Gagal kirim link: {resp.get('description', '')}")
+                return True  # Upload berhasil meski kirim link gagal
+            else:
+                print(f"[WARN] Upload ke Drive gagal, fallback kirim via Telegram")
+
+        # Fallback: kirim via Telegram langsung
         with open(file_path, "rb") as f:
             resp = requests.post(
                 f"{API_URL}/sendDocument",
@@ -297,12 +320,12 @@ def send_pdf_to_telegram(chat_id, file_path, caption=""):
                 timeout=120,
             ).json()
         if resp.get("ok"):
-            print(f"[INFO] PDF terkirim: {os.path.basename(file_path)}")
+            print(f"[INFO] PDF terkirim via Telegram: {os.path.basename(file_path)}")
             return True
         print(f"[WARN] Gagal kirim PDF: {resp.get('description', '')}")
         return False
     except Exception as e:
-        print(f"[ERROR] sendDocument gagal: {e}")
+        print(f"[ERROR] send_pdf_to_telegram gagal: {e}")
         return False
 
 def format_header(title):
@@ -1485,9 +1508,14 @@ def dispatch(update):
 def send_startup_notification():
     """Kirim pesan ke Telegram sebagai bukti bot aktif."""
     try:
+        gdrive_status = "OFF"
+        if os.environ.get("GDRIVE_SA_JSON") and os.environ.get("GDRIVE_FOLDER_ID"):
+            gdrive_status = "ON"
+
+        msg = f"✅ Bot aktif!\n\nGoogle Drive: {gdrive_status}\n\nKirim /start untuk memulai."
         requests.post(
             f"{API_URL}/sendMessage",
-            json={"chat_id": ALLOWED_CHAT_ID, "text": "✅ Bot aktif! Kirim /start untuk memulai."},
+            json={"chat_id": ALLOWED_CHAT_ID, "text": msg},
             timeout=10,
         )
         print("[INFO] Notifikasi startup terkirim.")
