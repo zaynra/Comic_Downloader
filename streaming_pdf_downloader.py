@@ -390,16 +390,20 @@ class StreamingPDFDownloader:
 # ============================================================
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python streaming_pdf_downloader.py <url> [start_ch] [end_ch]")
-        print("Example: python streaming_pdf_downloader.py https://example.com/comic/my-comic 1 50")
-        sys.exit(1)
+    print("Streaming PDF Downloader")
+    print("Download -> Convert PDF -> Hapus Gambar")
+    print("-" * 50)
 
-    url = sys.argv[1]
-    start = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    end = int(sys.argv[3]) if len(sys.argv) > 3 else 9999
+    url = input("Masukkan URL series: ").strip()
+    if not url.startswith("http"):
+        url = "https://" + url
 
     dl = StreamingPDFDownloader()
-    result = dl.run(url, start_ch=start, end_ch=end)
 
-    print(f"\nResult: {json.dumps(result, indent=2)}")
+    start_input = input("Chapter mulai (default 1): ").strip()
+    end_input = input("Chapter akhir (default semua): ").strip()
+
+    start = float(start_input) if start_input else 1
+    end = float(end_input) if end_input else 9999
+
+    dl.run(url, start_ch=start, end_ch=end)
