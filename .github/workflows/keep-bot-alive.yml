@@ -27,16 +27,12 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Write Telegram config from secrets
-        run: |
-          cat > notification_config.json << EOF
-          {
-            "telegram": {
-              "enabled": true,
-              "bot_token": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
-              "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}"
-            }
-          }
-          EOF
+        run: python -c "
+          import json;
+          cfg = {'telegram': {'enabled': True, 'bot_token': '${{ secrets.TELEGRAM_BOT_TOKEN }}', 'chat_id': '${{ secrets.TELEGRAM_CHAT_ID }}'}};
+          open('notification_config.json', 'w').write(json.dumps(cfg, indent=2));
+          print('Config written:', json.dumps(cfg, indent=2))
+          "
 
       - name: Run bot
         run: python telegram_bot_listener.py

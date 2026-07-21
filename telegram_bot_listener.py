@@ -10,9 +10,14 @@ from datetime import datetime
 
 import requests
 
-from notification_manager import TelegramNotifier
-import convert as converter
-from comic_downloader import UniversalComicDownloader, list_downloaded_comics
+try:
+    from notification_manager import TelegramNotifier
+    import convert as converter
+    from comic_downloader import UniversalComicDownloader, list_downloaded_comics
+except ImportError as e:
+    print(f"[FATAL] Gagal import modul: {e}")
+    print("[FATAL] Jalankan: pip install -r requirements.txt")
+    sys.exit(1)
 
 CONFIG_FILE = "notification_config.json"
 OFFSET_FILE = "telegram_listener_offset.txt"
@@ -27,10 +32,21 @@ def load_telegram_config():
     if not os.path.exists(CONFIG_FILE):
         print(f"[FATAL] {CONFIG_FILE} tidak ditemukan.")
         sys.exit(1)
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        config = json.load(f)
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[FATAL] {CONFIG_FILE} JSON rusak: {e}")
+        with open(CONFIG_FILE, "r") as f:
+            print(f"[FATAL] Isi file:\n{f.read()}")
+        sys.exit(1)
     telegram = config.get("telegram", {})
-    return telegram.get("bot_token"), str(telegram.get("chat_id"))
+    token = telegram.get("bot_token")
+    chat_id = telegram.get("chat_id")
+    if not token or not chat_id:
+        print(f"[FATAL] bot_token atau chat_id kosong di {CONFIG_FILE}")
+        sys.exit(1)
+    return token, str(chat_id)
 
 BOT_TOKEN, ALLOWED_CHAT_ID = load_telegram_config()
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -1320,4 +1336,8 @@ def main():
         print("\n[INFO] Bot dihentikan manual (Ctrl+C).")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"[FATAL] Bot crash: {e}")
+        traceback.print_exc()
