@@ -974,7 +974,7 @@ def main():
         f"🤖 <b>Telegram Listener Active</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📡 <b>Status</b>\n"
-        f"   Both Active\n\n"
+        f"   Bot Active\n\n"
         f"🕐 <b>Time</b>\n"
         f"   {now}"
     )
