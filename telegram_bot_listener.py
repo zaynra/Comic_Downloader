@@ -341,10 +341,20 @@ def show_download_confirm(chat_id, msg_id, data):
     url = data.get("url", "Unknown")
     start = data.get("start", 1)
     end = data.get("end", "?")
+    title = data.get("title", "Sedang memuat...")
+
+    base_dir = get_setting("base_dir")
+    existing_nums = progress_downloader.detect_existing_progress(url, base_dir=base_dir)
 
     text = format_header("Comic Download")
-    text += f"Judul\n{data.get('title', 'Sedang memuat...')}\n\n"
-    text += f"Chapter\n{start} - {end}\n\n"
+    text += f"Judul\n{title}\n\n"
+    if existing_nums:
+        sorted_nums = sorted(existing_nums)
+        text += f"Downloaded\n{len(sorted_nums)} Chapters\n\n"
+        text += f"Last Downloaded\nChapter {sorted_nums[-1]:g}\n\n"
+    else:
+        text += f"Status\nBelum ada chapter terdownload\n\n"
+    text += f"Chapter Range\n{start} - {end}\n\n"
     text += f"URL\n{url}"
 
     markup = {
