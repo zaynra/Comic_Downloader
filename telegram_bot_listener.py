@@ -687,7 +687,23 @@ def begin_range_selection(chat_id, msg_id, url, title):
     dan Favorit -- semuanya lanjut ke prompt pemilihan range chapter,
     bukan langsung full-range 1-9999 seperti sebelumnya."""
     set_last_url(url, title)
-    data = {"url": url, "title": title}
+
+    settings = load_store()["settings"]
+    base_dir = settings["base_dir"]
+    last_chapter = 0
+    total_downloaded = 0
+
+    try:
+        downloader = UniversalComicDownloader()
+        completed_nums = downloader.detect_existing_progress(url, komik_root=base_dir)
+        if completed_nums:
+            sorted_nums = sorted(completed_nums)
+            last_chapter = sorted_nums[-1]
+            total_downloaded = len(sorted_nums)
+    except Exception as e:
+        print(f"[WARN] Gagal detect progress: {e}")
+
+    data = {"url": url, "title": title, "last_chapter": last_chapter, "downloaded_count": total_downloaded}
     show_range_prompt(chat_id, msg_id, data)
 
 
@@ -835,10 +851,6 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
     """Streaming mode: download -> convert -> send PDF -> delete images, per chapter."""
     from streaming_pdf_downloader import StreamingPDFDownloader
 
-    base_folder = os.path.join(settings["base_dir"], title)
-    result_dir = os.path.join(base_folder, "Result")
-    os.makedirs(result_dir, exist_ok=True)
-
     streamer = StreamingPDFDownloader(max_workers=max_workers, driver_holder=driver_holder)
 
     def _bridge_cancel():
@@ -877,6 +889,9 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
 
         stats = streamer.run(url, start, end, base_dir=settings["base_dir"], progress_callback=progress_bridge)
 
+        real_title = stats.get("title", title)
+        base_folder = os.path.join(settings["base_dir"], real_title)
+
         pdfs_sent = 0
         if stats.get("pdfs"):
             with job_state_lock:
@@ -885,27 +900,28 @@ def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_w
                 if job_cancel_event.is_set():
                     break
                 chap_name = os.path.splitext(os.path.basename(pdf_path))[0]
-                if send_pdf_to_telegram(chat_id, pdf_path, f"📖 {title} - {chap_name}"):
+                if send_pdf_to_telegram(chat_id, pdf_path, f"📖 {real_title} - {chap_name}"):
                     pdfs_sent += 1
                     try:
                         os.remove(pdf_path)
                     except Exception:
                         pass
 
-        for folder_name in os.listdir(base_folder):
-            folder_path = os.path.join(base_folder, folder_name)
-            if os.path.isdir(folder_path) and folder_name != "Result":
-                try:
-                    shutil.rmtree(folder_path)
-                except Exception:
-                    pass
+        if os.path.isdir(base_folder):
+            for folder_name in os.listdir(base_folder):
+                folder_path = os.path.join(base_folder, folder_name)
+                if os.path.isdir(folder_path) and folder_name != "Result":
+                    try:
+                        shutil.rmtree(folder_path)
+                    except Exception:
+                        pass
 
         if stats.get("cancelled"):
             text = format_header("⛔ Dihentikan")
-            text += f"Judul\n{title}\n\nBerhasil kirim: {pdfs_sent} PDF"
+            text += f"Judul\n{real_title}\n\nBerhasil kirim: {pdfs_sent} PDF"
         else:
             text = format_header("✅ Selesai")
-            text += f"Judul\n{title}\n\nChapter: {stats['success']}/{stats['total']}\nPDF dikirim: {pdfs_sent}"
+            text += f"Judul\n{real_title}\n\nChapter: {stats['success']}/{stats['total']}\nPDF dikirim: {pdfs_sent}"
 
         markup = {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]}
         send_or_edit(chat_id, text, markup, msg_id)

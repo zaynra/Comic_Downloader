@@ -1179,7 +1179,7 @@ class StreamingPDFDownloader:
 
         return {
             "total": len(to_download), "success": success_count, "failed": failed_count,
-            "cancelled": cancelled_flag, "pdfs": pdfs_created,
+            "cancelled": cancelled_flag, "pdfs": pdfs_created, "title": title,
         }
 
 
