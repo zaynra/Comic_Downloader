@@ -35,4 +35,4 @@ jobs:
           "
 
       - name: Run bot
-        run: python telegram_bot_listener.py
+        run: python -u telegram_bot_listener.py
