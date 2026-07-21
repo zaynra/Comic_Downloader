@@ -637,7 +637,19 @@ def handle_url_input(chat_id, url):
 
     send_or_edit(chat_id, format_header("Menganalisis URL...") + "Sedang membaca judul...", msg_id=msg_id)
 
-    title = _guess_title(url)
+    try:
+        title = _guess_title(url)
+    except Exception as e:
+        log_crash(f"Gagal menganalisis URL: {url}", e)
+        send_or_edit(
+            chat_id,
+            format_header("❌ Gagal Membaca URL") + f"URL:\n{url}\n\nError:\n{e}",
+            {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]},
+            msg_id,
+        )
+        set_state(chat_id, "IDLE")
+        return
+
     begin_range_selection(chat_id, msg_id, url, title)
 
 
