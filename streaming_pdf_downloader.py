@@ -1217,6 +1217,16 @@ class StreamingPDFDownloader:
         mins, secs = divmod(int(elapsed), 60)
         durasi = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
 
+        total_size_mb = sum(os.path.getsize(p) / 1048576 for p in pdfs_created if os.path.isfile(p))
+
+        downloaded_nums = sorted([adapter.get_chapter_num(url) for _, url in to_download[:success_count]])
+        if downloaded_nums:
+            first_ch = f"{downloaded_nums[0]:g}"
+            last_ch = f"{downloaded_nums[-1]:g}"
+            chapter_range = first_ch if first_ch == last_ch else f"{first_ch} - {last_ch}"
+        else:
+            chapter_range = "N/A"
+
         summary = {
             "total": total,
             "success": success_count,
@@ -1228,13 +1238,14 @@ class StreamingPDFDownloader:
         print(f"\n{'='*50}")
         print(f"  DOWNLOAD COMPLETE")
         print(f"{'='*50}")
-        print(f"  Title    : {title}")
-        print(f"  Duration : {durasi}")
-        print(f"  Total    : {total} chapters")
-        print(f"  Success  : {success_count}")
-        print(f"  Failed   : {failed_count}")
-        print(f"  PDFs     : {len(pdfs_created)} files")
-        print(f"  Location : {result_dir}")
+        print(f"  Title     : {title}")
+        print(f"  Chapters  : {chapter_range} ({success_count} downloaded)")
+        print(f"  Duration  : {durasi}")
+        print(f"  Total     : {total} chapters")
+        print(f"  Success   : {success_count}")
+        print(f"  Failed    : {failed_count}")
+        print(f"  PDFs      : {len(pdfs_created)} files ({total_size_mb:.1f} MB)")
+        print(f"  Location  : {result_dir}")
         print(f"{'='*50}\n")
 
         if send_notifications:
