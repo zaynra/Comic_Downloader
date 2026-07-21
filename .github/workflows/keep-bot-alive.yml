@@ -1,0 +1,42 @@
+name: Comic Bot Keepalive
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: comic-bot-singleton
+  cancel-in-progress: true
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - run: pip install -r requirements.txt
+
+      - name: Write Telegram config from secrets
+        run: |
+          cat > notification_config.json << EOF
+          {
+            "telegram": {
+              "enabled": true,
+              "bot_token": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
+              "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}"
+            }
+          }
+          EOF
+
+      - name: Run bot
+        run: python telegram_bot_listener.py
