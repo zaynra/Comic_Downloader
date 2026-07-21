@@ -322,6 +322,16 @@ def show_download_menu(chat_id, msg_id):
 def show_range_prompt(chat_id, msg_id, data):
     text = format_header("📑 Pilih Range Chapter")
     text += f"Judul\n{data.get('title', '-')}\n\n"
+
+    base_dir = get_setting("base_dir")
+    existing_nums = progress_downloader.detect_existing_progress(data.get("url", ""), base_dir=base_dir)
+    if existing_nums:
+        sorted_nums = sorted(existing_nums)
+        text += f"Downloaded\n{len(sorted_nums)} Chapters\n\n"
+        text += f"Last Downloaded\nChapter {sorted_nums[-1]:g}\n\n"
+    else:
+        text += f"Status\nBelum ada chapter terdownload\n\n"
+
     text += "Ketik salah satu format berikut sebagai pesan:\n"
     text += "  • 12          -> chapter 12 saja\n"
     text += "  • 12-45       -> chapter 12 sampai 45\n"
@@ -343,17 +353,8 @@ def show_download_confirm(chat_id, msg_id, data):
     end = data.get("end", "?")
     title = data.get("title", "Sedang memuat...")
 
-    base_dir = get_setting("base_dir")
-    existing_nums = progress_downloader.detect_existing_progress(url, base_dir=base_dir)
-
     text = format_header("Comic Download")
     text += f"Judul\n{title}\n\n"
-    if existing_nums:
-        sorted_nums = sorted(existing_nums)
-        text += f"Downloaded\n{len(sorted_nums)} Chapters\n\n"
-        text += f"Last Downloaded\nChapter {sorted_nums[-1]:g}\n\n"
-    else:
-        text += f"Status\nBelum ada chapter terdownload\n\n"
     text += f"Chapter Range\n{start} - {end}\n\n"
     text += f"URL\n{url}"
 
@@ -607,21 +608,22 @@ def handle_range_input(chat_id, text):
 # ============================================================
 
 def real_time_progress_callback(chat_id, msg_id):
-    def _callback(idx, total, label, result):
+    def _callback(num, total, result):
+        label = f"Chapter {num:g}"
         with job_state_lock:
-            job_state["completed"] = idx
+            job_state["completed"] = num
             job_state["total"] = total
             elapsed = time.time() - job_state["start_time"]
-            speed = (idx / elapsed) if elapsed > 0 else 0
-            remaining = total - idx
+            speed = (num / elapsed) if elapsed > 0 else 0
+            remaining = total - num
             eta = format_duration(remaining / speed if speed > 0 else 0)
 
-            bar, percent = build_progress_bar(idx, total)
+            bar, percent = build_progress_bar(num, total)
             activity = job_state.get("activity", "Downloading")
 
         text = format_header(f"📥 {activity}...")
         text += f"{bar}\n{percent}%\n\n"
-        text += f"Progress\nChapter {idx} / {total}\n\n"
+        text += f"Progress\nChapter {num:g} / {total}\n\n"
         text += f"Current Chapter\n{label}\n\n"
         text += f"Speed\n{speed:.1f} ch/s\n\n"
         text += f"ETA\n{eta}"
