@@ -535,7 +535,7 @@ def get_state(chat_id):
 
 
 def _guess_title(url):
-    return UniversalComicDownloader._guess_display_name(UniversalComicDownloader._extract_slug(url))
+    return StreamingPDFDownloader._guess_display_name(StreamingPDFDownloader._extract_slug(url))
 
 
 def begin_range_selection(chat_id, msg_id, url, title):
@@ -968,6 +968,16 @@ def dispatch(update):
 def main():
     offset = load_offset() or 0
     print("[INFO] Telegram Bot UI Inline Keyboard Berjalan.")
+    notifier = TelegramNotifier()
+    now = datetime.now().strftime("%H:%M:%S")
+    notifier.send(
+        f"🤖 <b>Telegram Listener Active</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📡 <b>Status</b>\n"
+        f"   Both Active\n\n"
+        f"🕐 <b>Time</b>\n"
+        f"   {now}"
+    )
     try:
         while True:
             try:
