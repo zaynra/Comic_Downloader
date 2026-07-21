@@ -1389,5 +1389,3 @@ if __name__ == "__main__":
     end = float(end_input) if end_input else 9999
 
     result = dl.run(url, start_ch=start, end_ch=end)
-
-    print(f"\nResult: {json.dumps(result, indent=2)}")
