@@ -776,6 +776,138 @@ class GenericSiteAdapter(BaseSiteAdapter):
             print(f"      [!] Gagal memangkas chapter_manifest.json: {e}")
 
 
+class AsuraScansAdapter(BaseSiteAdapter):
+    name = "asurascans.com"
+    BASE_URL = "https://asuracomic.net"
+    END_DESIGN_URL = "EndDesign.webp"
+    CHAPTER_LINK_PATTERN = re.compile(r'(chapter|ch|c|ep)/?.*?\d', re.IGNORECASE)
+    CHAPTER_NUM_PATTERN = re.compile(r'(?:chapter|ch|c|ep)[/-]?(\d+(?:\.\d+)?)', re.IGNORECASE)
+
+    def get_title(self, driver, series_url):
+        driver.get(series_url)
+        time.sleep(4)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        candidates = [
+            soup.select_one('h1'),
+            soup.select_one('h1.font-bold'),
+            soup.select_one('h1.text-3xl'),
+            soup.select_one('.series-title'),
+            soup.select_one('meta[property="og:title"]'),
+        ]
+        for tag in candidates:
+            if tag:
+                txt = tag.get('content') or tag.get_text(strip=True)
+                if txt and len(txt) > 3 and "BETA" not in txt.upper():
+                    return self.core.clean_name(txt)
+        slug = series_url.rstrip('/').split('/')[-1]
+        return self.core.clean_name(urllib.parse.unquote(slug)) or "Comic_Download"
+
+    def get_chapters(self, driver, series_url):
+        driver.get(series_url)
+        time.sleep(4)
+        last_h = driver.execute_script("return document.body.scrollHeight")
+        for i in range(30):
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(1.0)
+            new_h = driver.execute_script("return document.body.scrollHeight")
+            if new_h == last_h and i > 5:
+                break
+            last_h = new_h
+        time.sleep(3)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        links = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if self.CHAPTER_LINK_PATTERN.search(href):
+                full_url = urllib.parse.urljoin(self.BASE_URL, href)
+                if full_url not in links:
+                    links.append(full_url)
+        links = [u for u in links if self.get_chapter_num(u) > 0]
+        links.sort(key=self.get_chapter_num)
+        return links
+
+    def get_chapter_num(self, chap_url):
+        m = re.search(r'chapter/(\d+(?:\.\d+)?)', chap_url, re.I)
+        return float(m.group(1)) if m else -1
+
+    def get_chapter_images(self, driver, chap_url, cancel_event=None):
+        driver.get(chap_url)
+        time.sleep(5)
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: d.execute_script("return document.querySelectorAll('astro-island').length") > 0
+            )
+        except Exception:
+            pass
+        time.sleep(3)
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        try:
+            pages = driver.execute_script("""
+                const islands = document.querySelectorAll('astro-island');
+                for (const island of islands) {
+                    const props = island.getAttribute('props');
+                    if (!props) continue;
+                    try {
+                        const parsed = JSON.parse(props);
+                        if (parsed && parsed.pages) {
+                            let pagesData = parsed.pages;
+                            if (Array.isArray(pagesData) && pagesData.length > 1) {
+                                pagesData = pagesData[1];
+                            }
+                            if (Array.isArray(pagesData)) {
+                                const urls = [];
+                                for (const item of pagesData) {
+                                    if (Array.isArray(item) && item.length > 1) {
+                                        const pageObj = item[1];
+                                        if (pageObj && pageObj.url) {
+                                            let url = pageObj.url;
+                                            if (Array.isArray(url) && url.length > 1) {
+                                                url = url[1];
+                                            }
+                                            if (typeof url === 'string' && url.startsWith('http')) {
+                                                urls.push(url);
+                                            }
+                                        }
+                                    }
+                                }
+                                if (urls.length > 0) return urls;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                return null;
+            """)
+            if pages and len(pages) > 0:
+                print(f"[INFO] AsuraScans: Found {len(pages)} pages from astro-island props")
+                pages = [u for u in pages if self.END_DESIGN_URL not in u]
+                return pages
+        except Exception as e:
+            print(f"[WARN] AsuraScans: Failed to extract from astro-island: {e}")
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        try:
+            page_source = driver.page_source
+            url_pattern = re.compile(r'"url":\s*\[0,\s*"(https://cdn\.asurascans\.com/[^"]+)"\]')
+            matches = url_pattern.findall(page_source)
+            if matches:
+                print(f"[INFO] AsuraScans: Found {len(matches)} pages from page source regex")
+                pages = list(dict.fromkeys(matches))
+                pages = [u for u in pages if self.END_DESIGN_URL not in u]
+                return pages
+        except Exception as e:
+            print(f"[WARN] AsuraScans: Failed to extract from page source: {e}")
+
+        return []
+
+
 class DemonicScansAdapter(BaseSiteAdapter):
     name = "demonicscans.org"
     BASE_URL = "https://demonicscans.org"
@@ -845,6 +977,8 @@ class DemonicScansAdapter(BaseSiteAdapter):
 
 SITE_ADAPTERS = {
     'demonicscans.org': DemonicScansAdapter,
+    'asurascans.com': AsuraScansAdapter,
+    'asuracomic.net': AsuraScansAdapter,
 }
 
 

@@ -299,7 +299,7 @@ class GenericSiteAdapter:
 
     def get_chapter_images(self, driver, chap_url, cancel_event=None):
         driver.get(chap_url)
-        time.sleep(3)
+        time.sleep(4)
 
         last_height = driver.execute_script("return document.body.scrollHeight")
         stable_rounds = 0
@@ -307,7 +307,7 @@ class GenericSiteAdapter:
             if cancel_event and cancel_event.is_set():
                 return []
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-            time.sleep(0.8)
+            time.sleep(1.0)
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 stable_rounds += 1
@@ -321,37 +321,43 @@ class GenericSiteAdapter:
             return []
 
         driver.execute_script("window.scrollTo(0, 0)")
-        time.sleep(0.5)
+        time.sleep(1)
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(1.5)
+        time.sleep(2)
 
         if cancel_event and cancel_event.is_set():
             return []
 
         driver.execute_script("""
-            // Force-load all lazy images
-            document.querySelectorAll('img').forEach(img => {
-                let src = img.dataset.src || img.dataset.lazySrc || img.dataset.original
-                       || img.dataset.lazy || img.dataset.url
-                       || (img.srcset && img.srcset.split(' ')[0])
-                       || img.src;
-                if (src && src !== img.src) {
-                    img.src = src;
-                    img.removeAttribute('loading');
-                    img.removeAttribute('data-src');
-                    img.removeAttribute('data-lazy-src');
-                    img.removeAttribute('data-original');
-                }
-            });
-
-            // Trigger IntersectionObserver for lazy-loading libraries
-            if (typeof IntersectionObserver !== 'undefined') {
-                document.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
-                    img.scrollIntoView();
+            // Force-load all lazy images - multiple passes
+            for (let pass = 0; pass < 3; pass++) {
+                document.querySelectorAll('img').forEach(img => {
+                    let src = img.dataset.src || img.dataset.lazySrc || img.dataset.original
+                           || img.dataset.lazy || img.dataset.url || img.dataset.bg
+                           || (img.srcset && img.srcset.split(' ')[0])
+                           || img.src;
+                    if (src && src !== img.src && !src.startsWith('data:')) {
+                        img.src = src;
+                        img.removeAttribute('loading');
+                        img.removeAttribute('data-src');
+                        img.removeAttribute('data-lazy-src');
+                        img.removeAttribute('data-original');
+                        img.removeAttribute('data-lazy');
+                    }
+                });
+                // Also handle background images on divs (some sites use this)
+                document.querySelectorAll('[data-bg], [data-background]').forEach(el => {
+                    let bg = el.dataset.bg || el.dataset.background;
+                    if (bg) el.style.backgroundImage = 'url(' + bg + ')';
                 });
             }
 
-            // Remove tiny images (icons, emojis, etc.)
+            // Trigger IntersectionObserver
+            document.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
+                img.scrollIntoView();
+            });
+
+            // Remove tiny images
             document.querySelectorAll('img').forEach(img => {
                 if (img.classList.contains('emoji') || img.classList.contains('wp-smiley')) {
                     img.remove();
@@ -363,7 +369,7 @@ class GenericSiteAdapter:
                 }
             });
         """)
-        time.sleep(3)
+        time.sleep(4)
 
         if cancel_event and cancel_event.is_set():
             return []
@@ -581,6 +587,210 @@ class GenericSiteAdapter:
             pass
 
 
+class AsuraScansAdapter(GenericSiteAdapter):
+    name = "asurascans.com"
+    BASE_URL = "https://asuracomic.net"
+    END_DESIGN_URL = "EndDesign.webp"
+
+    def get_title(self, driver, series_url):
+        driver.get(series_url)
+        time.sleep(4)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        candidates = [
+            soup.select_one('h1'), soup.select_one('h1.font-bold'),
+            soup.select_one('h1.text-3xl'), soup.select_one('.series-title'),
+            soup.select_one('meta[property="og:title"]'),
+        ]
+        for tag in candidates:
+            if tag:
+                txt = tag.get('content') or tag.get_text(strip=True)
+                if txt and len(txt) > 3 and "BETA" not in txt.upper():
+                    return self.core.clean_name(txt)
+        slug = series_url.rstrip('/').split('/')[-1]
+        return self.core.clean_name(urllib.parse.unquote(slug)) or "Comic_Download"
+
+    def get_chapters(self, driver, series_url):
+        driver.get(series_url)
+        time.sleep(4)
+        last_h = driver.execute_script("return document.body.scrollHeight")
+        for i in range(30):
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(1.0)
+            new_h = driver.execute_script("return document.body.scrollHeight")
+            if new_h == last_h and i > 5:
+                break
+            last_h = new_h
+        time.sleep(3)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        links = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if self.CHAPTER_LINK_PATTERN.search(href):
+                full_url = urllib.parse.urljoin(self.BASE_URL, href)
+                if full_url not in links:
+                    links.append(full_url)
+        links = [u for u in links if self.get_chapter_num(u) > 0]
+        links.sort(key=self.get_chapter_num)
+        return links
+
+    def get_chapter_num(self, chap_url):
+        m = re.search(r'chapter/(\d+(?:\.\d+)?)', chap_url, re.I)
+        return float(m.group(1)) if m else -1
+
+    def get_chapter_images(self, driver, chap_url, cancel_event=None):
+        """Extract chapter images from AsuraScans Astro island props."""
+        driver.get(chap_url)
+        time.sleep(5)
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Wait for Astro island to render
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: d.execute_script("return document.querySelectorAll('astro-island').length") > 0
+            )
+        except Exception:
+            pass
+
+        time.sleep(3)
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Method 1: Try to extract from astro-island props
+        try:
+            pages = driver.execute_script("""
+                // Search through astro-island props for page data
+                const islands = document.querySelectorAll('astro-island');
+                for (const island of islands) {
+                    const props = island.getAttribute('props');
+                    if (!props) continue;
+                    try {
+                        const parsed = JSON.parse(props);
+                        // Look for pages key in the props structure
+                        if (parsed && parsed.pages) {
+                            // Astro serialization: [1, [[0, {url: [0, "..."]}], ...]]
+                            let pagesData = parsed.pages;
+                            if (Array.isArray(pagesData) && pagesData.length > 1) {
+                                pagesData = pagesData[1]; // Get the array part
+                            }
+                            if (Array.isArray(pagesData)) {
+                                const urls = [];
+                                for (const item of pagesData) {
+                                    if (Array.isArray(item) && item.length > 1) {
+                                        const pageObj = item[1];
+                                        if (pageObj && pageObj.url) {
+                                            let url = pageObj.url;
+                                            if (Array.isArray(url) && url.length > 1) {
+                                                url = url[1]; // [0, "actual_url"]
+                                            }
+                                            if (typeof url === 'string' && url.startsWith('http')) {
+                                                urls.push(url);
+                                            }
+                                        }
+                                    }
+                                }
+                                if (urls.length > 0) return urls;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                return null;
+            """)
+
+            if pages and len(pages) > 0:
+                print(f"[INFO] AsuraScans: Found {len(pages)} pages from astro-island props")
+                pages = [u for u in pages if self.END_DESIGN_URL not in u]
+                return pages
+        except Exception as e:
+            print(f"[WARN] AsuraScans: Failed to extract from astro-island: {e}")
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Method 2: Try to extract from page source HTML directly
+        try:
+            page_source = driver.page_source
+            # Look for the pattern: "url":[0,"https://cdn.asurascans.com/..."]
+            url_pattern = re.compile(r'"url":\s*\[0,\s*"(https://cdn\.asurascans\.com/[^"]+)"\]')
+            matches = url_pattern.findall(page_source)
+            if matches:
+                print(f"[INFO] AsuraScans: Found {len(matches)} pages from page source regex")
+                pages = list(dict.fromkeys(matches))  # dedupe while preserving order
+                pages = [u for u in pages if self.END_DESIGN_URL not in u]
+                return pages
+        except Exception as e:
+            print(f"[WARN] AsuraScans: Failed to extract from page source: {e}")
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Method 3: Fallback to generic image extraction
+        print("[INFO] AsuraScans: Falling back to generic image extraction")
+        return self._generic_fallback(driver, chap_url, cancel_event)
+
+    def _generic_fallback(self, driver, chap_url, cancel_event=None):
+        """Generic fallback - scroll and find img tags."""
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        stable_rounds = 0
+        for _ in range(30):
+            if cancel_event and cancel_event.is_set():
+                return []
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(1.0)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                stable_rounds += 1
+                if stable_rounds >= 3:
+                    break
+            else:
+                stable_rounds = 0
+            last_height = new_height
+
+        driver.execute_script("window.scrollTo(0, 0)")
+        time.sleep(1)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        time.sleep(2)
+
+        driver.execute_script("""
+            document.querySelectorAll('img').forEach(img => {
+                let src = img.dataset.src || img.dataset.lazySrc || img.dataset.original
+                       || img.dataset.lazy || img.dataset.url || img.dataset.bg
+                       || (img.srcset && img.srcset.split(' ')[0])
+                       || img.src;
+                if (src && src !== img.src && !src.startsWith('data:')) {
+                    img.src = src;
+                    img.removeAttribute('loading');
+                    img.removeAttribute('data-src');
+                    img.removeAttribute('data-lazy-src');
+                    img.removeAttribute('data-original');
+                    img.removeAttribute('data-lazy');
+                }
+            });
+            document.querySelectorAll('[data-bg], [data-background]').forEach(el => {
+                let bg = el.dataset.bg || el.dataset.background;
+                if (bg) el.style.backgroundImage = 'url(' + bg + ')';
+            });
+            document.querySelectorAll('img').forEach(img => {
+                if (img.naturalWidth) img.setAttribute('data-natural-width', img.naturalWidth);
+                if (img.naturalHeight) img.setAttribute('data-natural-height', img.naturalHeight);
+            });
+        """)
+        time.sleep(4)
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        for tag in soup.select(self.EXCLUDE_SECTION_SELECTORS):
+            tag.decompose()
+
+        reader_container = soup.select_one(self.READER_SELECTORS) or soup
+        candidates = self._extract_sequential_images(reader_container, chap_url)
+        candidates = list(dict.fromkeys(candidates))
+        candidates = self._filter_domain_outliers(candidates)
+        candidates = [u for u in candidates if self.END_DESIGN_URL not in u]
+        return candidates
+
+
 class DemonicScansAdapter(GenericSiteAdapter):
     name = "demonicscans.org"
     BASE_URL = "https://demonicscans.org"
@@ -641,7 +851,7 @@ class DemonicScansAdapter(GenericSiteAdapter):
         return collected
 
 
-SITE_ADAPTERS = {'demonicscans.org': DemonicScansAdapter}
+SITE_ADAPTERS = {'demonicscans.org': DemonicScansAdapter, 'asurascans.com': AsuraScansAdapter, 'asuracomic.net': AsuraScansAdapter}
 
 
 def resolve_adapter(core, url):
