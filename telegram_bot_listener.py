@@ -609,7 +609,9 @@ def set_state(chat_id, state, msg_id=None, data=None):
 
 def get_state(chat_id):
     with state_lock:
-        return user_states.get(chat_id, {"state": "IDLE", "msg_id": None, "data": {}})
+        if chat_id not in user_states:
+            user_states[chat_id] = {"state": "IDLE", "msg_id": None, "data": {}}
+        return user_states[chat_id]
 
 
 def _guess_title(url):
@@ -1250,7 +1252,10 @@ def dispatch(update):
         if chat_id != ALLOWED_CHAT_ID: return
         text = msg.get("text", "").strip()
 
-        requests.post(f"{API_URL}/deleteMessage", json={"chat_id": chat_id, "message_id": msg["message_id"]})
+        try:
+            requests.post(f"{API_URL}/deleteMessage", json={"chat_id": chat_id, "message_id": msg["message_id"]}, timeout=5)
+        except Exception:
+            pass
 
         if text == "/start":
             show_main_menu(chat_id)
