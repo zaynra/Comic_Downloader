@@ -10,14 +10,10 @@ from datetime import datetime
 
 import requests
 
-try:
-    from notification_manager import TelegramNotifier
-    import convert as converter
-    from comic_downloader import UniversalComicDownloader, list_downloaded_comics
-except ImportError as e:
-    print(f"[FATAL] Gagal import modul: {e}")
-    print("[FATAL] Jalankan: pip install -r requirements.txt")
-    sys.exit(1)
+from notification_manager import TelegramNotifier
+import convert as converter
+from streaming_pdf_downloader import StreamingPDFDownloader
+from comic_downloader import list_downloaded_comics
 
 CONFIG_FILE = "notification_config.json"
 OFFSET_FILE = "telegram_listener_offset.txt"
@@ -32,27 +28,16 @@ def load_telegram_config():
     if not os.path.exists(CONFIG_FILE):
         print(f"[FATAL] {CONFIG_FILE} tidak ditemukan.")
         sys.exit(1)
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            config = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[FATAL] {CONFIG_FILE} JSON rusak: {e}")
-        with open(CONFIG_FILE, "r") as f:
-            print(f"[FATAL] Isi file:\n{f.read()}")
-        sys.exit(1)
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        config = json.load(f)
     telegram = config.get("telegram", {})
-    token = telegram.get("bot_token")
-    chat_id = telegram.get("chat_id")
-    if not token or not chat_id:
-        print(f"[FATAL] bot_token atau chat_id kosong di {CONFIG_FILE}")
-        sys.exit(1)
-    return token, str(chat_id)
+    return telegram.get("bot_token"), str(telegram.get("chat_id"))
 
 BOT_TOKEN, ALLOWED_CHAT_ID = load_telegram_config()
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 bot = TelegramNotifier()
-progress_downloader = UniversalComicDownloader()
+progress_downloader = StreamingPDFDownloader()
 
 # State Management
 state_lock = threading.Lock()
@@ -81,11 +66,9 @@ job_state = {
 job_cancel_event = threading.Event()
 
 DEFAULT_SETTINGS = {
-    "auto_convert_pdf": False,   # kalau ON, tombol "✅ Download" otomatis convert ke PDF juga
     "parallel_download": False,  # OFF = 4 worker (aman), ON = 10 worker (lebih cepat, lebih berat)
     "auto_cleanup": True,        # jalankan pembersihan gambar penutup/promosi otomatis
     "notify_download": True,     # kirim notifikasi Telegram terpisah start/finish/error (bot.*)
-    "notify_convert": True,
     "notify_error": True,
     "base_dir": "Komik",
 }
@@ -99,23 +82,14 @@ def _default_store():
 
 def load_store():
     with store_lock:
-        default = _default_store()
-
-        if os.environ.get("GITHUB_PAT"):
-            try:
-                from gist_store import load_store as gist_load
-                return gist_load(default)
-            except Exception as e:
-                print(f"[WARN] Gist load gagal, fallback ke lokal: {e}")
-
         if not os.path.exists(STORE_FILE):
-            return default
+            return _default_store()
         try:
             with open(STORE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception:
-            return default
-        base = default
+            return _default_store()
+        base = _default_store()
         base.update({k: v for k, v in data.items() if k in base})
         base["settings"] = {**DEFAULT_SETTINGS, **data.get("settings", {})}
         return base
@@ -123,13 +97,6 @@ def load_store():
 
 def save_store(store):
     with store_lock:
-        if os.environ.get("GITHUB_PAT"):
-            try:
-                from gist_store import save_store as gist_save
-                gist_save(store)
-            except Exception as e:
-                print(f"[WARN] Gist save gagal: {e}")
-
         try:
             with open(STORE_FILE, "w", encoding="utf-8") as f:
                 json.dump(store, f, indent=2, ensure_ascii=False)
@@ -247,29 +214,24 @@ def log_crash(context, exc):
 # UI HELPERS & FORMATTING
 # ============================================================
 
-def send_or_edit(chat_id, text, reply_markup=None, msg_id=None, state=None):
+def send_or_edit(chat_id, text, reply_markup=None, msg_id=None):
     data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
     if reply_markup:
         data["reply_markup"] = json.dumps(reply_markup)
 
     try:
         if msg_id:
-            edit_data = dict(data)
-            edit_data["message_id"] = msg_id
-            resp = requests.post(f"{API_URL}/editMessageText", json=edit_data, timeout=10).json()
+            data["message_id"] = msg_id
+            resp = requests.post(f"{API_URL}/editMessageText", json=data, timeout=10).json()
+            if not resp.get("ok"):
+                desc = resp.get("description", "")
+                if "message is not modified" not in desc:
+                    print(f"[WARN] editMessageText gagal: {resp}")
+        else:
+            resp = requests.post(f"{API_URL}/sendMessage", json=data, timeout=10).json()
             if resp.get("ok"):
-                return msg_id
-            desc = resp.get("description", "")
-            if "message is not modified" in desc:
-                return msg_id
-            print(f"[WARN] editMessageText gagal, kirim pesan baru: {desc}")
-        resp = requests.post(f"{API_URL}/sendMessage", json=data, timeout=10).json()
-        if resp.get("ok"):
-            new_id = resp["result"]["message_id"]
-            if state is not None:
-                state["msg_id"] = new_id
-            return new_id
-        print(f"[WARN] sendMessage gagal: {resp}")
+                return resp["result"]["message_id"]
+            print(f"[WARN] sendMessage gagal: {resp}")
     except Exception as e:
         print(f"[ERROR] API Telegram: {e}")
     return None
@@ -285,48 +247,6 @@ def answer_cq(cq_id, text="", alert=False):
         )
     except Exception as e:
         print(f"[ERROR] answerCallbackQuery gagal: {e}")
-
-def send_pdf_to_telegram(chat_id, file_path, caption=""):
-    """Upload PDF ke Google Drive, kirim link via Telegram."""
-    try:
-        from gdrive_upload import get_uploader
-        uploader = get_uploader()
-
-        if uploader._init_service():
-            result = uploader.upload_file(file_path)
-            if result:
-                msg = f"📄 {result['name']} ({result['size_mb']} MB)\n🔗 {result['link']}"
-                if caption:
-                    msg = f"{caption}\n\n{msg}"
-                resp = requests.post(
-                    f"{API_URL}/sendMessage",
-                    json={"chat_id": chat_id, "text": msg, "disable_web_page_preview": True},
-                    timeout=10,
-                ).json()
-                if resp.get("ok"):
-                    print(f"[INFO] PDF uploaded ke Drive & link terkirim: {result['name']}")
-                    return True
-                print(f"[WARN] Gagal kirim link: {resp.get('description', '')}")
-                return True  # Upload berhasil meski kirim link gagal
-            else:
-                print(f"[WARN] Upload ke Drive gagal, fallback kirim via Telegram")
-
-        # Fallback: kirim via Telegram langsung
-        with open(file_path, "rb") as f:
-            resp = requests.post(
-                f"{API_URL}/sendDocument",
-                data={"chat_id": chat_id, "caption": caption},
-                files={"document": (os.path.basename(file_path), f, "application/pdf")},
-                timeout=120,
-            ).json()
-        if resp.get("ok"):
-            print(f"[INFO] PDF terkirim via Telegram: {os.path.basename(file_path)}")
-            return True
-        print(f"[WARN] Gagal kirim PDF: {resp.get('description', '')}")
-        return False
-    except Exception as e:
-        print(f"[ERROR] send_pdf_to_telegram gagal: {e}")
-        return False
 
 def format_header(title):
     return f"=========================\n{title}\n=========================\n\n"
@@ -372,18 +292,15 @@ def show_main_menu(chat_id, msg_id=None):
     text = format_header("📚 Comic Downloader") + "Selamat datang di Comic Downloader.\n\nSilakan pilih menu yang tersedia."
     markup = {
         "inline_keyboard": [
-            [{"text": "📥 Download Comic", "callback_data": "nav_download"}, {"text": "🔄 Convert PDF", "callback_data": "nav_convert"}],
+            [{"text": "📥 Download Comic", "callback_data": "nav_download"}],
             [{"text": "📚 Library", "callback_data": "nav_library"}, {"text": "📊 Status", "callback_data": "nav_status"}],
             [{"text": "⚙️ Settings", "callback_data": "nav_settings"}, {"text": "❌ Exit", "callback_data": "nav_exit"}]
         ]
     }
-    st = get_state(chat_id)
-    st["state"] = "IDLE"
-    if msg_id:
-        st["msg_id"] = msg_id
-    new_msg_id = send_or_edit(chat_id, text, markup, msg_id, state=st)
+    set_state(chat_id, "IDLE", msg_id=msg_id)
+    new_msg_id = send_or_edit(chat_id, text, markup, msg_id)
     if not msg_id and new_msg_id:
-        st["msg_id"] = new_msg_id
+        set_state(chat_id, "IDLE", msg_id=new_msg_id)
 
 def show_download_menu(chat_id, msg_id):
     last = get_last_url()
@@ -398,46 +315,26 @@ def show_download_menu(chat_id, msg_id):
             [{"text": "⬅️ Kembali", "callback_data": "nav_main"}]
         ]
     }
-    st = get_state(chat_id)
-    st["state"] = "WAIT_URL"
-    if msg_id:
-        st["msg_id"] = msg_id
-    print(f"[DEBUG] show_download_menu: state set to WAIT_URL for chat_id={chat_id}")
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    set_state(chat_id, "WAIT_URL", msg_id=msg_id)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 
 def show_range_prompt(chat_id, msg_id, data):
     text = format_header("📑 Pilih Range Chapter")
     text += f"Judul\n{data.get('title', '-')}\n\n"
-
-    last_ch = data.get("last_chapter", 0)
-    downloaded = data.get("downloaded_count", 0)
-
-    if downloaded > 0:
-        text += f"📥 Sudah terdownload: {downloaded} chapter (sampai chapter {last_ch:g})\n"
-        text += f"💡 Ketik {int(last_ch) + 1} untuk lanjut dari chapter terakhir\n\n"
-    else:
-        text += "📥 Belum ada chapter terdownload\n\n"
-
     text += "Ketik salah satu format berikut sebagai pesan:\n"
     text += "  • 12          -> chapter 12 saja\n"
     text += "  • 12-45       -> chapter 12 sampai 45\n"
     text += "  • all         -> semua chapter (default lama)\n\n"
     text += "Atau tekan tombol di bawah untuk langsung ambil semua."
-
-    buttons = [[{"text": "📦 Semua Chapter", "callback_data": "dl_range_all"}]]
-    if last_ch > 0:
-        next_ch = int(last_ch) + 1
-        buttons.insert(0, [{"text": f"▶️ Lanjut dari Chapter {next_ch}", "callback_data": f"dl_range_start_{next_ch}"}])
-    buttons.append([{"text": "❌ Batal", "callback_data": "nav_main"}])
-
-    markup = {"inline_keyboard": buttons}
-    st = get_state(chat_id)
-    st["state"] = "WAIT_RANGE"
-    st["data"] = data
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    markup = {
+        "inline_keyboard": [
+            [{"text": "📦 Semua Chapter", "callback_data": "dl_range_all"}],
+            [{"text": "❌ Batal", "callback_data": "nav_main"}]
+        ]
+    }
+    set_state(chat_id, "WAIT_RANGE", msg_id=msg_id, data=data)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 
 def show_download_confirm(chat_id, msg_id, data):
@@ -452,31 +349,24 @@ def show_download_confirm(chat_id, msg_id, data):
 
     markup = {
         "inline_keyboard": [
-            [{"text": "✅ Download", "callback_data": "dl_run_standard"}, {"text": "📄 Download + PDF", "callback_data": "dl_run_pdf"}],
+            [{"text": "📥 Download", "callback_data": "dl_run_standard"}],
             [{"text": "🔁 Ubah Range", "callback_data": "dl_change_range"}, {"text": "⭐ Simpan Favorit", "callback_data": "dl_fav_add"}],
-            [{"text": "⚙️ Advanced", "callback_data": "dl_advanced"}, {"text": "❌ Cancel", "callback_data": "nav_main"}]
+            [{"text": "❌ Cancel", "callback_data": "nav_main"}]
         ]
     }
-    st = get_state(chat_id)
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 def show_advanced_download(chat_id, msg_id):
     parallel_on = get_setting("parallel_download")
     text = format_header("Advanced Download") + "Silakan pilih mode download."
     markup = {
         "inline_keyboard": [
-            [{"text": "📥 Download Images", "callback_data": "dl_run_standard"}, {"text": "📄 Download PDF", "callback_data": "dl_run_pdf"}],
             [{"text": f"⚡ Parallel Download: {_on(parallel_on)}", "callback_data": "adv_toggle_parallel"}],
             [{"text": "🧹 Bersihkan Cache Junk-Signature", "callback_data": "adv_clear_cache"}],
             [{"text": "⬅️ Back", "callback_data": "nav_download"}]
         ]
     }
-    st = get_state(chat_id)
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 def show_status_menu(chat_id, msg_id):
     with job_state_lock:
@@ -502,10 +392,7 @@ def show_status_menu(chat_id, msg_id):
             [{"text": "⬅️ Back", "callback_data": "nav_main"}]
         ]
     }
-    st = get_state(chat_id)
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 def show_library_menu(chat_id, msg_id):
     base_dir = get_setting("base_dir")
@@ -514,11 +401,8 @@ def show_library_menu(chat_id, msg_id):
     if not comics:
         text = format_header("📚 Library") + f"Belum ada komik yang terdownload di folder {base_dir}/."
         markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "nav_main"}]]}
-        st = get_state(chat_id)
-        st["state"] = "IDLE"
-        if msg_id:
-            st["msg_id"] = msg_id
-        send_or_edit(chat_id, text, markup, msg_id, state=st)
+        set_state(chat_id, "IDLE", msg_id=msg_id)
+        send_or_edit(chat_id, text, markup, msg_id)
         return
 
     text = format_header("📚 Library") + f"{len(comics)} komik terdownload. Pilih untuk melihat detail:"
@@ -529,12 +413,8 @@ def show_library_menu(chat_id, msg_id):
     buttons.append([{"text": "⬅️ Back", "callback_data": "nav_main"}])
     markup = {"inline_keyboard": buttons}
 
-    st = get_state(chat_id)
-    st["state"] = "WAIT_LIBRARY_PICK"
-    st["data"] = {"comics": comics}
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    set_state(chat_id, "WAIT_LIBRARY_PICK", msg_id=msg_id, data={"comics": comics})
+    send_or_edit(chat_id, text, markup, msg_id)
 
 
 def show_library_detail(chat_id, msg_id, comic_name):
@@ -556,7 +436,6 @@ def show_library_detail(chat_id, msg_id, comic_name):
 
     markup = {
         "inline_keyboard": [
-            [{"text": "🔄 Convert ke PDF", "callback_data": "lib_convert"}],
             [{"text": "🗑 Hapus Komik Ini", "callback_data": "lib_delete_ask"}],
             [{"text": "⬅️ Back", "callback_data": "nav_library"}]
         ]
@@ -579,87 +458,33 @@ def show_settings_menu(chat_id, msg_id):
     text = format_header("⚙️ Settings") + f"Konfigurasi Downloader\n\nFolder Download: {s['base_dir']}/"
     markup = {
         "inline_keyboard": [
-            [{"text": f"📄 Auto Convert PDF: {_on(s['auto_convert_pdf'])}", "callback_data": "set_toggle_auto_convert_pdf"}],
             [{"text": f"⚡ Parallel Download: {_on(s['parallel_download'])}", "callback_data": "set_toggle_parallel_download"}],
             [{"text": f"🧹 Auto Cleanup: {_on(s['auto_cleanup'])}", "callback_data": "set_toggle_auto_cleanup"}],
             [{"text": "🔔 Notification", "callback_data": "nav_notification"}],
             [{"text": "⬅️ Back", "callback_data": "nav_main"}]
         ]
     }
-    st = get_state(chat_id)
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 def show_notification_menu(chat_id, msg_id):
     s = load_store()["settings"]
     text = format_header("🔔 Notification")
     text += f"Download Finished\n{_on(s['notify_download'])}\n\n"
-    text += f"Convert Finished\n{_on(s['notify_convert'])}\n\n"
     text += f"Error Notification\n{_on(s['notify_error'])}\n\n"
     text += "(Ini mengatur notifikasi Telegram TERPISAH dari pesan progres di bot ini)"
     markup = {
         "inline_keyboard": [
             [{"text": "Toggle Download", "callback_data": "notif_toggle_download"}],
-            [{"text": "Toggle Convert", "callback_data": "notif_toggle_convert"}],
             [{"text": "Toggle Error", "callback_data": "notif_toggle_error"}],
             [{"text": "⬅️ Back", "callback_data": "nav_settings"}]
         ]
     }
-    st = get_state(chat_id)
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
+    send_or_edit(chat_id, text, markup, msg_id)
 
 def show_exit_menu(chat_id, msg_id):
     text = format_header("👋 Terima Kasih") + "Comic Downloader ditutup.\n\nGunakan /start untuk membuka kembali menu."
-    st = get_state(chat_id)
-    st["state"] = "EXIT"
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, None, msg_id, state=st)
-
-
-def show_convert_menu(chat_id, msg_id):
-    base_dir = get_setting("base_dir")
-    comics = list_downloaded_comics(base_dir)
-
-    if not comics:
-        text = format_header("🔄 Convert PDF") + f"Belum ada komik yang terdownload di folder {base_dir}/."
-        markup = {"inline_keyboard": [[{"text": "⬅️ Kembali", "callback_data": "nav_main"}]]}
-        st = get_state(chat_id)
-        st["state"] = "IDLE"
-        if msg_id:
-            st["msg_id"] = msg_id
-        send_or_edit(chat_id, text, markup, msg_id, state=st)
-        return
-
-    text = format_header("🔄 Convert PDF") + "Pilih komik yang ingin dikonversi ke PDF:"
-    buttons = [
-        [{"text": f"📖 {name}", "callback_data": f"cv_pick_{idx}"}]
-        for idx, name in enumerate(comics)
-    ]
-    buttons.append([{"text": "⬅️ Kembali", "callback_data": "nav_main"}])
-    markup = {"inline_keyboard": buttons}
-
-    st = get_state(chat_id)
-    st["state"] = "WAIT_CONVERT_PICK"
-    st["data"] = {"comics": comics}
-    if msg_id:
-        st["msg_id"] = msg_id
-    send_or_edit(chat_id, text, markup, msg_id, state=st)
-
-
-def show_convert_confirm(chat_id, msg_id, comic_name):
-    text = format_header("🔄 Convert PDF")
-    text += f"Komik\n{comic_name}\n\nChapter yang belum punya PDF akan dikonversi sekarang."
-    markup = {
-        "inline_keyboard": [
-            [{"text": "✅ Convert Sekarang", "callback_data": "cv_run"}],
-            [{"text": "❌ Batal", "callback_data": "nav_convert"}],
-        ]
-    }
-    send_or_edit(chat_id, text, markup, msg_id)
+    set_state(chat_id, "EXIT", msg_id=msg_id)
+    send_or_edit(chat_id, text, None, msg_id)
 
 
 def show_favorites_menu(chat_id, msg_id):
@@ -696,9 +521,7 @@ def set_state(chat_id, state, msg_id=None, data=None):
 
 def get_state(chat_id):
     with state_lock:
-        if chat_id not in user_states:
-            user_states[chat_id] = {"state": "IDLE", "msg_id": None, "data": {}}
-        return user_states[chat_id]
+        return user_states.get(chat_id, {"state": "IDLE", "msg_id": None, "data": {}})
 
 
 def _guess_title(url):
@@ -710,28 +533,11 @@ def begin_range_selection(chat_id, msg_id, url, title):
     dan Favorit -- semuanya lanjut ke prompt pemilihan range chapter,
     bukan langsung full-range 1-9999 seperti sebelumnya."""
     set_last_url(url, title)
-
-    settings = load_store()["settings"]
-    base_dir = settings["base_dir"]
-    last_chapter = 0
-    total_downloaded = 0
-
-    try:
-        downloader = UniversalComicDownloader()
-        completed_nums = downloader.detect_existing_progress(url, komik_root=base_dir)
-        if completed_nums:
-            sorted_nums = sorted(completed_nums)
-            last_chapter = sorted_nums[-1]
-            total_downloaded = len(sorted_nums)
-    except Exception as e:
-        print(f"[WARN] Gagal detect progress: {e}")
-
-    data = {"url": url, "title": title, "last_chapter": last_chapter, "downloaded_count": total_downloaded}
+    data = {"url": url, "title": title}
     show_range_prompt(chat_id, msg_id, data)
 
 
 def handle_url_input(chat_id, url):
-    print(f"[DEBUG] handle_url_input dipanggil: chat_id={chat_id} url={url!r}")
     state = get_state(chat_id)
     msg_id = state.get("msg_id")
 
@@ -741,40 +547,10 @@ def handle_url_input(chat_id, url):
         show_download_menu(chat_id, msg_id)
         return
 
-    send_or_edit(chat_id, format_header("Menganalisis URL...") + "Sedang membaca judul dan cek progress...", msg_id=msg_id)
+    send_or_edit(chat_id, format_header("Menganalisis URL...") + "Sedang membaca judul...", msg_id=msg_id)
 
-    try:
-        title = _guess_title(url)
-    except Exception as e:
-        log_crash(f"Gagal menganalisis URL: {url}", e)
-        send_or_edit(
-            chat_id,
-            format_header("❌ Gagal Membaca URL") + f"URL:\n{url}\n\nError:\n{e}",
-            {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]},
-            msg_id,
-        )
-        set_state(chat_id, "IDLE")
-        return
-
-    settings = load_store()["settings"]
-    base_dir = settings["base_dir"]
-    completed_nums = set()
-    last_chapter = 0
-    total_downloaded = 0
-
-    try:
-        downloader = UniversalComicDownloader()
-        completed_nums = downloader.detect_existing_progress(url, komik_root=base_dir)
-        if completed_nums:
-            sorted_nums = sorted(completed_nums)
-            last_chapter = sorted_nums[-1]
-            total_downloaded = len(sorted_nums)
-    except Exception as e:
-        print(f"[WARN] Gagal detect progress: {e}")
-
-    data = {"url": url, "title": title, "last_chapter": last_chapter, "downloaded_count": total_downloaded}
-    set_last_url(url, title)
-    show_range_prompt(chat_id, msg_id, data)
+    title = _guess_title(url)
+    begin_range_selection(chat_id, msg_id, url, title)
 
 
 RANGE_SINGLE = re.compile(r'^\s*(\d+(?:\.\d+)?)\s*$')
@@ -847,175 +623,48 @@ def real_time_progress_callback(chat_id, msg_id):
 
     return _callback
 
-def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
+def _run_download_task(chat_id, url, start, end, msg_id):
     settings = load_store()["settings"]
     max_workers = 10 if settings["parallel_download"] else 4
 
     driver_holder = {}
     with job_state_lock:
         job_state.update({
-            "active": True, "job_type": "download_pdf", "activity": "Downloading",
+            "active": True, "job_type": "download", "activity": "Downloading",
             "start_time": time.time(), "msg_id": msg_id,
             "completed": 0, "total": 0, "driver_holder": driver_holder,
         })
 
     job_cancel_event.clear()
-    _run_streaming_task(chat_id, url, start, end, msg_id, settings, max_workers, driver_holder)
-
-
-def _run_streaming_task(chat_id, url, start, end, msg_id, settings, max_workers, driver_holder):
-    """Streaming mode: download -> convert -> send PDF -> delete images, per chapter."""
-    from streaming_pdf_downloader import StreamingPDFDownloader
-
-    streamer = StreamingPDFDownloader(max_workers=max_workers, driver_holder=driver_holder)
-
-    def _bridge_cancel():
-        while not job_cancel_event.is_set():
-            time.sleep(1)
-        streamer.cancel()
-
-    threading.Thread(target=_bridge_cancel, daemon=True).start()
-
-    def progress_bridge(idx, total, label, result):
-        with job_state_lock:
-            job_state["completed"] = idx
-            job_state["total"] = total
-            elapsed = time.time() - job_state["start_time"]
-            speed = (idx / elapsed) if elapsed > 0 else 0
-            remaining = total - idx
-            eta = format_duration(remaining / speed if speed > 0 else 0)
-            bar, percent = build_progress_bar(idx, total)
-
-        text = format_header("📥 Download + Convert...")
-        text += f"{bar}\n{percent}%\n\n"
-        text += f"Progress\nChapter {idx} / {total}\n\n"
-        text += f"Current Chapter\n{label}\n\n"
-        text += f"Speed\n{speed:.1f} ch/s\n\n"
-        text += f"ETA\n{eta}"
-        markup = {"inline_keyboard": [[{"text": "⛔ Stop", "callback_data": "job_stop"}]]}
-        if idx % max(1, (total // 10)) == 0 or idx == total:
-            send_or_edit(chat_id, text, markup, msg_id)
-
-    try:
-        temp_title = _guess_title(url)
-        send_or_edit(
-            chat_id,
-            format_header("📥 Download + Convert...") + f"Komik\n{temp_title}\n\nMode: Streaming (download -> convert -> kirim per chapter)",
-            None, msg_id,
-        )
-
-        stats = streamer.run(url, start, end, base_dir=settings["base_dir"], progress_callback=progress_bridge)
-
-        real_title = stats.get("title", temp_title)
-        base_folder = os.path.join(settings["base_dir"], real_title)
-        print(f"[DEBUG] Streaming selesai. Title={real_title!r}, PDFs={len(stats.get('pdfs', []))}")
-
-        pdfs_sent = 0
-        pdfs = stats.get("pdfs", [])
-        if pdfs:
-            with job_state_lock:
-                job_state["activity"] = "Sending"
-            for pdf_path in pdfs:
-                if job_cancel_event.is_set():
-                    break
-                exists = os.path.isfile(pdf_path)
-                size = os.path.getsize(pdf_path) if exists else 0
-                print(f"[DEBUG] PDF: {pdf_path} exists={exists} size={size}")
-                if not exists:
-                    print(f"[WARN] File tidak ditemukan, skip: {pdf_path}")
-                    continue
-                chap_name = os.path.splitext(os.path.basename(pdf_path))[0]
-                result = send_pdf_to_telegram(chat_id, pdf_path, f"📖 {real_title} - {chap_name}")
-                print(f"[DEBUG] send_pdf_to_telegram result: {result}")
-                if result:
-                    pdfs_sent += 1
-                    try:
-                        os.remove(pdf_path)
-                    except Exception:
-                        pass
-        else:
-            print(f"[WARN] Tidak ada PDF untuk dikirim!")
-
-        if os.path.isdir(base_folder):
-            for folder_name in os.listdir(base_folder):
-                folder_path = os.path.join(base_folder, folder_name)
-                if os.path.isdir(folder_path) and folder_name != "Result":
-                    try:
-                        shutil.rmtree(folder_path)
-                    except Exception:
-                        pass
-
-        if stats.get("cancelled"):
-            text = format_header("⛔ Dihentikan")
-            text += f"Judul\n{real_title}\n\nBerhasil kirim: {pdfs_sent} PDF"
-        else:
-            text = format_header("✅ Selesai")
-            text += f"Judul\n{real_title}\n\nChapter: {stats['success']}/{stats['total']}\nPDF dikirim: {pdfs_sent}"
-
-        markup = {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]}
-        send_or_edit(chat_id, text, markup, msg_id)
-        set_state(chat_id, "IDLE")
-
-    except Exception as e:
-        log_crash(f"Streaming task gagal (chat {chat_id}, url {url})", e)
-        send_or_edit(
-            chat_id,
-            format_header("❌ Error") + str(e),
-            {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]},
-            msg_id,
-        )
-    finally:
-        with job_state_lock:
-            job_state["active"] = False
-            job_state["driver_holder"] = {}
-
-
-def _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder):
-    """Batch mode: download all images first, convert separately."""
     callback = real_time_progress_callback(chat_id, msg_id)
-    downloader = UniversalComicDownloader(max_workers=max_workers)
+    downloader = StreamingPDFDownloader(max_workers=max_workers)
+    title = _guess_title(url)
 
     try:
-        completed_nums = downloader.detect_existing_progress(url, komik_root=settings["base_dir"])
         stats = downloader.run(
-            url, start, end, completed_nums=completed_nums,
+            url, start, end,
             progress_callback=callback, send_notifications=settings["notify_download"],
             notify_on_error=settings["notify_error"],
             cancel_event=job_cancel_event, base_dir=settings["base_dir"],
-            auto_cleanup=settings["auto_cleanup"], driver_holder=driver_holder,
+            auto_cleanup=settings["auto_cleanup"],
         )
-
-        base_folder = os.path.join(settings["base_dir"], title)
-        conv_success, conv_failed = None, None
-
-        if not job_cancel_event.is_set():
-            with job_state_lock:
-                job_state["activity"] = "Converting"
-            send_or_edit(
-                chat_id,
-                format_header("🔄 Mengonversi ke PDF...") + f"Komik\n{title}",
-                None, msg_id,
-            )
-            conv_success, conv_failed = _convert_comic_folder(base_folder)
 
         if stats.get("cancelled"):
             text = format_header("⛔ Download Dihentikan")
-            text += f"Judul\n{title}\n\nDihentikan pada chapter ke-{stats['success'] + stats['failed']}/{stats['total']}."
+            text += f"Judul\n{title}\n\nDihentikan oleh user pada chapter ke-{stats['success'] + stats['failed']}/{stats['total']}."
         else:
             text = format_header("✅ Download Selesai")
             text += f"Judul\n{title}\n\nChapter\n{start} - {end}\n\n"
-            text += f"Download -> Berhasil: {stats['success']} | Gagal: {stats['failed']}"
-            if conv_success is not None:
-                text += f"\nConvert  -> Berhasil: {conv_success} | Gagal: {conv_failed}"
+            text += f"Berhasil: {stats['success']} | Gagal: {stats['failed']}"
 
         markup = {
             "inline_keyboard": [
-                [{"text": "📄 Convert ke PDF", "callback_data": "nav_convert"}, {"text": "⭐ Simpan Favorit", "callback_data": "stub_fav_from_result"}],
+                [{"text": "📥 Download Lagi", "callback_data": "nav_download"}, {"text": "⭐ Simpan Favorit", "callback_data": "stub_fav_from_result"}],
                 [{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]
             ]
         }
         send_or_edit(chat_id, text, markup, msg_id)
-        set_state(chat_id, "IDLE")
+        set_state(chat_id, "IDLE", data={"url": url, "title": title, "start": start, "end": end})
 
     except Exception as e:
         log_crash(f"Download task gagal (chat {chat_id}, url {url})", e)
@@ -1030,16 +679,12 @@ def _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_worke
             job_state["active"] = False
             job_state["driver_holder"] = {}
 
-def start_download_ui(chat_id, also_convert=False):
+def start_download_ui(chat_id):
     state = get_state(chat_id)
     data = state.get("data", {})
     msg_id = state.get("msg_id")
 
     if "url" not in data:
-        # Slot job sudah diambil try_activate_job() oleh dispatcher sebelum
-        # fungsi ini dipanggil, tapi ternyata batal mulai (sesi kadaluarsa) --
-        # WAJIB dilepas lagi supaya job_state tidak nyangkut active=True
-        # padahal tidak ada thread yang benar-benar berjalan.
         release_job_slot()
         send_or_edit(
             chat_id,
@@ -1052,119 +697,9 @@ def start_download_ui(chat_id, also_convert=False):
 
     threading.Thread(
         target=_run_download_task,
-        args=(chat_id, data["url"], data.get("start", 1), data.get("end", 9999), msg_id, also_convert),
+        args=(chat_id, data["url"], data.get("start", 1), data.get("end", 9999), msg_id),
         daemon=True,
     ).start()
-
-
-def _convert_comic_folder(comic_folder):
-    chapters = converter.scan_chapter_folders(comic_folder)
-    result_dir = converter.get_result_dir(comic_folder)
-    completed_names = converter.get_completed_chapter_names(result_dir)
-
-    to_convert = [
-        c for c in chapters
-        if converter.get_chapter_label(os.path.basename(c)) not in completed_names
-    ]
-
-    success, failed = 0, 0
-    for chapter_dir in to_convert:
-        chapter_name = os.path.basename(chapter_dir)
-        chapter_label = converter.get_chapter_label(chapter_name)
-        output_path = os.path.join(result_dir, converter.format_chapter_pdf_filename(chapter_label))
-        if converter.convert_chapter_to_pdf(chapter_dir, output_path):
-            success += 1
-        else:
-            failed += 1
-
-    return success, failed
-
-
-def _run_convert_task(chat_id, comic_name, msg_id):
-    settings = load_store()["settings"]
-    with job_state_lock:
-        # Sama seperti _run_download_task -- job_state["active"] sudah
-        # diset True secara atomik oleh try_activate_job() di dispatcher
-        # sebelum thread ini dimulai. Baris ini melengkapi field lainnya.
-        job_state.update({
-            "active": True, "job_type": "convert", "activity": "Converting",
-            "start_time": time.time(), "msg_id": msg_id, "comic_name": comic_name,
-            "completed": 0, "total": 0, "driver_holder": {},
-        })
-    job_cancel_event.clear()
-
-    comic_folder = os.path.join(settings["base_dir"], comic_name)
-
-    try:
-        chapters = converter.scan_chapter_folders(comic_folder)
-        result_dir = converter.get_result_dir(comic_folder)
-        completed_names = converter.get_completed_chapter_names(result_dir)
-        to_convert = [
-            c for c in chapters
-            if converter.get_chapter_label(os.path.basename(c)) not in completed_names
-        ]
-        total = len(to_convert)
-
-        if total == 0:
-            text = format_header("🔄 Convert PDF")
-            text += f"Komik\n{comic_name}\n\nSemua chapter sudah punya PDF, tidak ada yang perlu dikonversi."
-            send_or_edit(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]}, msg_id)
-            set_state(chat_id, "IDLE")
-            return
-
-        success, failed = 0, 0
-        for idx, chapter_dir in enumerate(to_convert, 1):
-            if job_cancel_event.is_set():
-                break
-
-            with job_state_lock:
-                job_state["completed"] = idx - 1
-                job_state["total"] = total
-
-            chapter_name = os.path.basename(chapter_dir)
-            chapter_label = converter.get_chapter_label(chapter_name)
-            output_path = os.path.join(result_dir, converter.format_chapter_pdf_filename(chapter_label))
-
-            if converter.convert_chapter_to_pdf(chapter_dir, output_path):
-                success += 1
-            else:
-                failed += 1
-
-            bar, percent = build_progress_bar(idx, total)
-            text = format_header("🔄 Converting...")
-            text += f"{bar}\n{percent}%\n\nChapter {idx}/{total}\nSaat ini: {chapter_name}"
-            markup = {"inline_keyboard": [[{"text": "⛔ Stop", "callback_data": "job_stop"}]]}
-            if idx % max(1, (total // 10)) == 0 or idx == total:
-                send_or_edit(chat_id, text, markup, msg_id)
-
-        if job_cancel_event.is_set():
-            text = format_header("⛔ Convert Dihentikan")
-            text += f"Komik\n{comic_name}\n\nBerhasil: {success} | Gagal: {failed} (dihentikan sebelum selesai)"
-        else:
-            text = format_header("✅ Convert Selesai")
-            text += f"Komik\n{comic_name}\n\nBerhasil: {success} | Gagal: {failed}"
-
-        if settings["notify_convert"]:
-            try:
-                bot.finish(comic_name, total, success, failed, "-", activity="Convert")
-            except Exception:
-                pass
-
-        send_or_edit(chat_id, text, {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]}, msg_id)
-        set_state(chat_id, "IDLE")
-
-    except Exception as e:
-        log_crash(f"Convert task gagal (chat {chat_id}, comic {comic_name})", e)
-        send_or_edit(
-            chat_id,
-            format_header("❌ Error") + str(e),
-            {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]},
-            msg_id,
-        )
-    finally:
-        with job_state_lock:
-            job_state["active"] = False
-            job_state["driver_holder"] = {}
 
 
 def stop_active_job():
@@ -1201,11 +736,7 @@ def dispatch(update):
             show_main_menu(chat_id, msg_id)
         elif data == "nav_download":
             answer_cq(cq_id)
-            print(f"[DEBUG] nav_download ditekan untuk chat_id={chat_id}")
             show_download_menu(chat_id, msg_id)
-        elif data == "nav_convert":
-            answer_cq(cq_id)
-            show_convert_menu(chat_id, msg_id)
         elif data == "nav_library":
             answer_cq(cq_id)
             show_library_menu(chat_id, msg_id)
@@ -1239,16 +770,6 @@ def dispatch(update):
             set_state(chat_id, "WAIT_CONFIRM", msg_id=msg_id, data=d)
             show_download_confirm(chat_id, msg_id, d)
 
-        elif data.startswith("dl_range_start_"):
-            answer_cq(cq_id)
-            start_num = int(data.replace("dl_range_start_", ""))
-            state = get_state(chat_id)
-            d = state.get("data", {})
-            d["start"] = start_num
-            d["end"] = 9999
-            set_state(chat_id, "WAIT_CONFIRM", msg_id=msg_id, data=d)
-            show_download_confirm(chat_id, msg_id, d)
-
         elif data == "dl_fav_add":
             state = get_state(chat_id)
             d = state.get("data", {})
@@ -1258,21 +779,11 @@ def dispatch(update):
                 answer_cq(cq_id, "Sudah ada di Favorit sebelumnya.", True)
 
         elif data == "dl_run_standard":
-            # Check-and-set ATOMIK (lihat try_activate_job) -- menggantikan
-            # pola lama is_job_active() (baca) lalu job_state["active"]=True
-            # di dalam thread (tulis) yang punya jeda/race window.
             if not try_activate_job("download"):
                 answer_cq(cq_id, "⚠️ Proses lain masih berjalan!", True)
             else:
                 answer_cq(cq_id, "Memulai Download...")
-                start_download_ui(chat_id, also_convert=False)
-
-        elif data == "dl_run_pdf":
-            if not try_activate_job("download_pdf"):
-                answer_cq(cq_id, "⚠️ Proses lain masih berjalan!", True)
-            else:
-                answer_cq(cq_id, "Memulai Download + Convert PDF...")
-                start_download_ui(chat_id, also_convert=True)
+                start_download_ui(chat_id)
 
         elif data == "dl_last_url":
             last = get_last_url()
@@ -1322,39 +833,6 @@ def dispatch(update):
                 answer_cq(cq_id, f"Gagal membersihkan: {e}", True)
             show_advanced_download(chat_id, msg_id)
 
-        elif data.startswith("cv_pick_"):
-            answer_cq(cq_id)
-            state = get_state(chat_id)
-            comics = state.get("data", {}).get("comics", [])
-            try:
-                idx = int(data.replace("cv_pick_", ""))
-            except ValueError:
-                idx = -1
-            if 0 <= idx < len(comics):
-                comic_name = comics[idx]
-                set_state(chat_id, "WAIT_CONVERT_CONFIRM", msg_id=msg_id, data={"comics": comics, "selected": comic_name})
-                show_convert_confirm(chat_id, msg_id, comic_name)
-            else:
-                show_convert_menu(chat_id, msg_id)
-
-        elif data == "cv_run":
-            state = get_state(chat_id)
-            comic_name = state.get("data", {}).get("selected")
-            if not comic_name:
-                answer_cq(cq_id, "Pilih komik dulu.", True)
-                show_convert_menu(chat_id, msg_id)
-            elif not try_activate_job("convert"):
-                # Check-and-set ATOMIK, sama seperti dl_run_standard/dl_run_pdf
-                # di atas -- menutup race window yang sama untuk tombol Convert.
-                answer_cq(cq_id, "⚠️ Proses lain masih berjalan!", True)
-            else:
-                answer_cq(cq_id, "Memulai Convert...")
-                threading.Thread(
-                    target=_run_convert_task,
-                    args=(chat_id, comic_name, msg_id),
-                    daemon=True,
-                ).start()
-
         elif data.startswith("lib_pick_"):
             answer_cq(cq_id)
             state = get_state(chat_id)
@@ -1367,17 +845,6 @@ def dispatch(update):
                 comic_name = comics[idx]
                 set_state(chat_id, "WAIT_LIBRARY_PICK", msg_id=msg_id, data={"comics": comics, "selected": comic_name})
                 show_library_detail(chat_id, msg_id, comic_name)
-            else:
-                show_library_menu(chat_id, msg_id)
-
-        elif data == "lib_convert":
-            answer_cq(cq_id)
-            state = get_state(chat_id)
-            comic_name = state.get("data", {}).get("selected")
-            if comic_name:
-                show_convert_confirm(chat_id, msg_id, comic_name)
-                set_state(chat_id, "WAIT_CONVERT_CONFIRM", msg_id=msg_id,
-                          data={"comics": [comic_name], "selected": comic_name})
             else:
                 show_library_menu(chat_id, msg_id)
 
@@ -1408,12 +875,6 @@ def dispatch(update):
             comic_name = state.get("data", {}).get("selected")
             show_library_detail(chat_id, msg_id, comic_name)
 
-        elif data == "set_toggle_auto_convert_pdf":
-            new_val = not get_setting("auto_convert_pdf")
-            set_setting("auto_convert_pdf", new_val)
-            answer_cq(cq_id, f"Auto Convert PDF: {'ON' if new_val else 'OFF'}")
-            show_settings_menu(chat_id, msg_id)
-
         elif data == "set_toggle_parallel_download":
             new_val = not get_setting("parallel_download")
             set_setting("parallel_download", new_val)
@@ -1430,12 +891,6 @@ def dispatch(update):
             new_val = not get_setting("notify_download")
             set_setting("notify_download", new_val)
             answer_cq(cq_id, f"Download Finished notif: {'ON' if new_val else 'OFF'}")
-            show_notification_menu(chat_id, msg_id)
-
-        elif data == "notif_toggle_convert":
-            new_val = not get_setting("notify_convert")
-            set_setting("notify_convert", new_val)
-            answer_cq(cq_id, f"Convert Finished notif: {'ON' if new_val else 'OFF'}")
             show_notification_menu(chat_id, msg_id)
 
         elif data == "notif_toggle_error":
@@ -1483,19 +938,14 @@ def dispatch(update):
         chat_id = str(msg["chat"]["id"])
         if chat_id != ALLOWED_CHAT_ID: return
         text = msg.get("text", "").strip()
-        print(f"[DEBUG] Pesan diterima chat_id={chat_id} text={text!r}")
 
-        try:
-            requests.post(f"{API_URL}/deleteMessage", json={"chat_id": chat_id, "message_id": msg["message_id"]}, timeout=5)
-        except Exception:
-            pass
+        requests.post(f"{API_URL}/deleteMessage", json={"chat_id": chat_id, "message_id": msg["message_id"]})
 
         if text == "/start":
             show_main_menu(chat_id)
             return
 
         state = get_state(chat_id).get("state")
-        print(f"[DEBUG] State saat ini: {state}")
         if state == "WAIT_URL":
             handle_url_input(chat_id, text)
         elif state == "WAIT_RANGE":
@@ -1505,28 +955,9 @@ def dispatch(update):
 # MAIN LOOP
 # ============================================================
 
-def send_startup_notification():
-    """Kirim pesan ke Telegram sebagai bukti bot aktif."""
-    try:
-        gdrive_status = "OFF"
-        if os.environ.get("GDRIVE_SA_JSON") and os.environ.get("GDRIVE_FOLDER_ID"):
-            gdrive_status = "ON"
-
-        msg = f"✅ Bot aktif!\n\nGoogle Drive: {gdrive_status}\n\nKirim /start untuk memulai."
-        requests.post(
-            f"{API_URL}/sendMessage",
-            json={"chat_id": ALLOWED_CHAT_ID, "text": msg},
-            timeout=10,
-        )
-        print("[INFO] Notifikasi startup terkirim.")
-    except Exception as e:
-        print(f"[WARN] Gagal kirim notifikasi startup: {e}")
-
-
 def main():
     offset = load_offset() or 0
     print("[INFO] Telegram Bot UI Inline Keyboard Berjalan.")
-    send_startup_notification()
     try:
         while True:
             try:
@@ -1554,8 +985,4 @@ def main():
         print("\n[INFO] Bot dihentikan manual (Ctrl+C).")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"[FATAL] Bot crash: {e}")
-        traceback.print_exc()
+    main()
