@@ -270,6 +270,25 @@ def answer_cq(cq_id, text="", alert=False):
     except Exception as e:
         print(f"[ERROR] answerCallbackQuery gagal: {e}")
 
+def send_pdf_to_telegram(chat_id, file_path, caption=""):
+    """Kirim file PDF ke Telegram user."""
+    try:
+        with open(file_path, "rb") as f:
+            resp = requests.post(
+                f"{API_URL}/sendDocument",
+                data={"chat_id": chat_id, "caption": caption},
+                files={"document": (os.path.basename(file_path), f, "application/pdf")},
+                timeout=120,
+            ).json()
+        if resp.get("ok"):
+            print(f"[INFO] PDF terkirim: {os.path.basename(file_path)}")
+            return True
+        print(f"[WARN] Gagal kirim PDF: {resp.get('description', '')}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] sendDocument gagal: {e}")
+        return False
+
 def format_header(title):
     return f"=========================\n{title}\n=========================\n\n"
 
@@ -751,11 +770,6 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
     job_type = "download_pdf" if also_convert else "download"
     driver_holder = {}
     with job_state_lock:
-        # NOTE: job_state["active"] SUDAH diset True secara atomik oleh
-        # try_activate_job() di dispatcher, SEBELUM thread ini dimulai --
-        # lihat penjelasan di definisi try_activate_job(). Baris ini hanya
-        # melengkapi field lain (job_type, activity, start_time, dst), bukan
-        # lagi titik pertama yang "membuka slot" job.
         job_state.update({
             "active": True, "job_type": job_type, "activity": "Downloading",
             "start_time": time.time(), "msg_id": msg_id,
@@ -763,20 +777,118 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
         })
 
     job_cancel_event.clear()
+    title = _guess_title(url)
+
+    if also_convert:
+        _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers)
+    else:
+        _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder)
+
+
+def _run_streaming_task(chat_id, url, start, end, msg_id, title, settings, max_workers):
+    """Streaming mode: download -> convert -> send PDF -> delete images, per chapter."""
+    from streaming_pdf_downloader import StreamingPDFDownloader
+
+    base_folder = os.path.join(settings["base_dir"], title)
+    result_dir = os.path.join(base_folder, "Result")
+    os.makedirs(result_dir, exist_ok=True)
+
+    streamer = StreamingPDFDownloader(max_workers=max_workers)
+
+    def _bridge_cancel():
+        while not job_cancel_event.is_set():
+            time.sleep(1)
+        streamer.cancel()
+
+    threading.Thread(target=_bridge_cancel, daemon=True).start()
+
+    def progress_bridge(idx, total, label, result):
+        with job_state_lock:
+            job_state["completed"] = idx
+            job_state["total"] = total
+            elapsed = time.time() - job_state["start_time"]
+            speed = (idx / elapsed) if elapsed > 0 else 0
+            remaining = total - idx
+            eta = format_duration(remaining / speed if speed > 0 else 0)
+            bar, percent = build_progress_bar(idx, total)
+
+        text = format_header("📥 Download + Convert...")
+        text += f"{bar}\n{percent}%\n\n"
+        text += f"Progress\nChapter {idx} / {total}\n\n"
+        text += f"Current Chapter\n{label}\n\n"
+        text += f"Speed\n{speed:.1f} ch/s\n\n"
+        text += f"ETA\n{eta}"
+        markup = {"inline_keyboard": [[{"text": "⛔ Stop", "callback_data": "job_stop"}]]}
+        if idx % max(1, (total // 10)) == 0 or idx == total:
+            send_or_edit(chat_id, text, markup, msg_id)
+
+    try:
+        send_or_edit(
+            chat_id,
+            format_header("📥 Download + Convert...") + f"Komik\n{title}\n\nMode: Streaming (download -> convert -> kirim per chapter)",
+            None, msg_id,
+        )
+
+        stats = streamer.run(url, start, end, base_dir=settings["base_dir"], progress_callback=progress_bridge)
+
+        pdfs_sent = 0
+        if stats.get("pdfs"):
+            with job_state_lock:
+                job_state["activity"] = "Sending"
+            for pdf_path in stats["pdfs"]:
+                if job_cancel_event.is_set():
+                    break
+                chap_name = os.path.splitext(os.path.basename(pdf_path))[0]
+                if send_pdf_to_telegram(chat_id, pdf_path, f"📖 {title} - {chap_name}"):
+                    pdfs_sent += 1
+                    try:
+                        os.remove(pdf_path)
+                    except Exception:
+                        pass
+
+        for folder_name in os.listdir(base_folder):
+            folder_path = os.path.join(base_folder, folder_name)
+            if os.path.isdir(folder_path) and folder_name != "Result":
+                try:
+                    shutil.rmtree(folder_path)
+                except Exception:
+                    pass
+
+        if stats.get("cancelled"):
+            text = format_header("⛔ Dihentikan")
+            text += f"Judul\n{title}\n\nBerhasil kirim: {pdfs_sent} PDF"
+        else:
+            text = format_header("✅ Selesai")
+            text += f"Judul\n{title}\n\nChapter: {stats['success']}/{stats['total']}\nPDF dikirim: {pdfs_sent}"
+
+        markup = {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]}
+        send_or_edit(chat_id, text, markup, msg_id)
+        set_state(chat_id, "IDLE")
+
+    except Exception as e:
+        log_crash(f"Streaming task gagal (chat {chat_id}, url {url})", e)
+        send_or_edit(
+            chat_id,
+            format_header("❌ Error") + str(e),
+            {"inline_keyboard": [[{"text": "⬅️ Main Menu", "callback_data": "nav_main"}]]},
+            msg_id,
+        )
+    finally:
+        with job_state_lock:
+            job_state["active"] = False
+            job_state["driver_holder"] = {}
+
+
+def _run_batch_task(chat_id, url, start, end, msg_id, title, settings, max_workers, driver_holder):
+    """Batch mode: download all images first, convert separately."""
     callback = real_time_progress_callback(chat_id, msg_id)
     downloader = UniversalComicDownloader(max_workers=max_workers)
-    title = _guess_title(url)
 
     try:
         completed_nums = downloader.detect_existing_progress(url, komik_root=settings["base_dir"])
         stats = downloader.run(
             url, start, end, completed_nums=completed_nums,
             progress_callback=callback, send_notifications=settings["notify_download"],
-            # notify_on_error sekarang TERPISAH dari notify_download -- dulu
-            # notifikasi error per-chapter ikut mati kalau "Download Finished"
-            # notif di-OFF-kan, dan toggle "Error Notification" sendiri di
-            # menu Notification tidak berpengaruh apa pun. Sekarang keduanya
-            # independen sesuai toggle masing-masing.
             notify_on_error=settings["notify_error"],
             cancel_event=job_cancel_event, base_dir=settings["base_dir"],
             auto_cleanup=settings["auto_cleanup"], driver_holder=driver_holder,
@@ -785,7 +897,7 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
         base_folder = os.path.join(settings["base_dir"], title)
         conv_success, conv_failed = None, None
 
-        if also_convert and not job_cancel_event.is_set():
+        if not job_cancel_event.is_set():
             with job_state_lock:
                 job_state["activity"] = "Converting"
             send_or_edit(
@@ -797,7 +909,7 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
 
         if stats.get("cancelled"):
             text = format_header("⛔ Download Dihentikan")
-            text += f"Judul\n{title}\n\nDihentikan oleh user pada chapter ke-{stats['success'] + stats['failed']}/{stats['total']}."
+            text += f"Judul\n{title}\n\nDihentikan pada chapter ke-{stats['success'] + stats['failed']}/{stats['total']}."
         else:
             text = format_header("✅ Download Selesai")
             text += f"Judul\n{title}\n\nChapter\n{start} - {end}\n\n"
@@ -812,7 +924,7 @@ def _run_download_task(chat_id, url, start, end, msg_id, also_convert=False):
             ]
         }
         send_or_edit(chat_id, text, markup, msg_id)
-        set_state(chat_id, "IDLE", data={"url": url, "title": title, "start": start, "end": end})
+        set_state(chat_id, "IDLE")
 
     except Exception as e:
         log_crash(f"Download task gagal (chat {chat_id}, url {url})", e)
