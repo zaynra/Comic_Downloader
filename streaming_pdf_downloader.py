@@ -1015,19 +1015,15 @@ class StreamingPDFDownloader:
         output_path = os.path.join(result_dir, output_name)
 
         if os.path.isfile(output_path):
-            print(f"      PDF sudah ada, skip: {output_name}")
             self._cleanup_folder(chapter_folder)
             return True, output_path
 
         try:
             ok = convert_chapter_to_pdf(chapter_folder, output_path)
             if ok and os.path.isfile(output_path):
-                size_mb = os.path.getsize(output_path) / 1048576
-                print(f"      PDF tersimpan: {output_name} ({size_mb:.1f} MB)")
                 self._cleanup_folder(chapter_folder)
                 return True, output_path
             else:
-                print(f"      [WARN] Convert gagal untuk {chapter_folder}")
                 return False, None
         except Exception as e:
             print(f"      [ERROR] Convert error: {e}")
@@ -1116,7 +1112,8 @@ class StreamingPDFDownloader:
             return {"total": 0, "success": 0, "failed": 0, "cancelled": False, "pdfs": []}
 
         total = len(to_download)
-        print(f"[INFO] Akan mendownload + convert {total} chapter\n")
+        print(f"\n[INFO] Akan mendownload + convert {total} chapter")
+        print("-" * 50)
 
         if send_notifications:
             try:
@@ -1140,7 +1137,8 @@ class StreamingPDFDownloader:
                     break
 
                 label = f"{num:g}"
-                print(f"[{idx}/{total}] Chapter {label}")
+                print(f"\n  [{idx}/{total}] Chapter {label}")
+                print(f"  {'-'*28}")
 
                 tmp_folder = tempfile.mkdtemp(prefix=f"ch_{label}_")
                 try:
@@ -1174,7 +1172,7 @@ class StreamingPDFDownloader:
                         progress_callback(num, total, result)
                     continue
 
-                print(f"      Downloaded: {result['pages']} halaman ({result['size_mb']:.1f} MB)")
+                print(f"  Downloaded: {result['pages']} pages ({result['size_mb']:.1f} MB)")
 
                 chap_folder_name = os.path.basename(tmp_folder)
                 proper_name = self.format_chapter_folder(num)
@@ -1198,8 +1196,11 @@ class StreamingPDFDownloader:
                 if ok:
                     success_count += 1
                     pdfs_created.append(pdf_path)
+                    pdf_size = os.path.getsize(pdf_path) / 1048576
+                    print(f"  PDF saved : {output_name} ({pdf_size:.1f} MB)")
                 else:
                     failed_count += 1
+                    print(f"  PDF failed: convert error")
 
                 if progress_callback:
                     progress_callback(num, total, result)
@@ -1214,6 +1215,7 @@ class StreamingPDFDownloader:
 
         elapsed = time.time() - run_start
         mins, secs = divmod(int(elapsed), 60)
+        durasi = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
 
         summary = {
             "total": total,
@@ -1224,12 +1226,16 @@ class StreamingPDFDownloader:
         }
 
         print(f"\n{'='*50}")
-        print(f"Selesai dalam {mins}m {secs}s")
-        print(f"Berhasil : {success_count}")
-        print(f"Gagal    : {failed_count}")
-        print(f"PDF      : {len(pdfs_created)} file")
-        print(f"Folder   : {result_dir}")
+        print(f"  DOWNLOAD COMPLETE")
         print(f"{'='*50}")
+        print(f"  Title    : {title}")
+        print(f"  Duration : {durasi}")
+        print(f"  Total    : {total} chapters")
+        print(f"  Success  : {success_count}")
+        print(f"  Failed   : {failed_count}")
+        print(f"  PDFs     : {len(pdfs_created)} files")
+        print(f"  Location : {result_dir}")
+        print(f"{'='*50}\n")
 
         if send_notifications:
             try:
