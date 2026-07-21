@@ -1260,7 +1260,7 @@ class StreamingPDFDownloader:
                     success_nums.append(num)
                     pdfs_created.append(pdf_path)
                     pdf_size = os.path.getsize(pdf_path) / 1048576
-                    print(f"  PDF saved : {output_name} ({pdf_size:.1f} MB)")
+                    print(f"  PDF saved : Chapter_{label}.pdf ({pdf_size:.1f} MB)")
                 else:
                     failed_count += 1
                     print(f"  PDF failed: convert error")
