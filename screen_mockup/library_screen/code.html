@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InkFlow - Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#131313",
+                      "tertiary": "#ffb2b7",
+                      "on-error-container": "#ffdad6",
+                      "outline": "#908fa0",
+                      "on-secondary-fixed-variant": "#005048",
+                      "inverse-surface": "#e5e2e1",
+                      "surface-variant": "#353534",
+                      "surface-container-high": "#2a2a2a",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "secondary-container": "#04b4a2",
+                      "primary-container": "#8083ff",
+                      "on-primary-fixed": "#07006c",
+                      "on-background": "#e5e2e1",
+                      "secondary-fixed-dim": "#4fdbc8",
+                      "tertiary-container": "#ff516a",
+                      "inverse-on-surface": "#313030",
+                      "on-primary-container": "#0d0096",
+                      "error": "#ffb4ab",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-container-low": "#1c1b1b",
+                      "primary": "#c0c1ff",
+                      "on-error": "#690005",
+                      "tertiary-fixed": "#ffdadb",
+                      "on-tertiary-container": "#5b0017",
+                      "on-surface": "#e5e2e1",
+                      "on-tertiary-fixed": "#40000d",
+                      "surface-bright": "#393939",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-tertiary": "#67001b",
+                      "surface-tint": "#c0c1ff",
+                      "outline-variant": "#464554",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-container": "#201f1f",
+                      "inverse-primary": "#494bd6",
+                      "surface-container-highest": "#353534",
+                      "error-container": "#93000a",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-secondary-container": "#003f38",
+                      "on-secondary": "#003731",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-dim": "#131313",
+                      "surface": "#131313",
+                      "secondary": "#4fdbc8",
+                      "secondary-fixed": "#71f8e4",
+                      "on-primary": "#1000a9",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-secondary-fixed": "#00201c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "md": "16px",
+                      "margin-tablet": "24px",
+                      "xs": "4px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "lg": "24px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "label-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.25px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-lg": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "57px",
+                              {
+                                      "lineHeight": "64px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.1px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #000000; /* Deep AMOLED black override */
+            color: #e5e2e1;
+        }
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(192, 193, 255, 0.1);
+        }
+        .comic-card {
+            background: #121212;
+            border: 0.5px solid rgba(192, 193, 255, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .comic-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+            border-color: rgba(192, 193, 255, 0.3);
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353534;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #464554;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-lg text-body-lg min-h-screen flex flex-col pt-16 pb-20 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 backdrop-blur-xl bg-background/80 dark:bg-background/80 text-primary dark:text-primary-fixed-dim">
+<button class="p-2 hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 rounded-full text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<div class="font-headline-lg text-headline-lg text-primary tracking-tight">
+            InkFlow
+        </div>
+<button class="p-2 hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 rounded-full text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet py-md flex flex-col gap-lg">
+<!-- Controls Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md pt-sm">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-xs">Library</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">4 Local Files • 1.2 GB Total</p>
+</div>
+<!-- View Switcher -->
+<div class="flex items-center bg-surface-container-high rounded-full p-1">
+<button class="p-2 rounded-full bg-secondary-container text-on-secondary-container active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">view_list</span>
+</button>
+</div>
+</div>
+<!-- Search Bar -->
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-[16px] py-3 pl-12 pr-4 text-on-surface font-body-md focus:ring-1 focus:ring-secondary focus:outline-none placeholder-on-surface-variant/50 transition-shadow" placeholder="Search local files..." type="text"/>
+</div>
+<!-- Grid Layout -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-gutter">
+<!-- Item 1 -->
+<div class="comic-card rounded-[24px] overflow-hidden flex flex-col group relative">
+<div class="aspect-[2/3] relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A highly detailed cinematic cover illustration of a futuristic cyberpunk cityscape at night, neon lights reflecting on wet pavement. Dark AMOLED color palette with electric blue and neon pink accents. High contrast, sharp details, comic book style cover art." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_uy3e6Dwe1wRe-YqiUCCpSVSNCJ34NTPyq6c67SwtTW-VKHXhlVcN2hcQWuHuG9Be_01v_SxY44YExzqSTyURAUc-NShZXEEG2skHLKtzEdbtL-eaU5cR9tHOHufa-sJlF5siKf4RUh1fh0opYVR4ZsDPfaJV1Euac1YZTngsb8DI4STRtoOLC2-NCiNqO65-kA9lPT2QZ4UTmqDj5brvt21hpmHN6CBp2as2AlR216fTCk-esyBOljfcJQy9qtHZZLm7jaPAy0zk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<!-- Context Menu Button -->
+<button class="absolute top-2 right-2 p-2 bg-surface-container-highest/80 backdrop-blur-md rounded-full text-on-surface opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-variant active:scale-90">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Neon Nights Vol. 1</h3>
+<div class="flex justify-between items-center text-on-surface-variant font-label-sm text-label-sm">
+<span>342 MB</span>
+<span>Oct 12</span>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="comic-card rounded-[24px] overflow-hidden flex flex-col group relative">
+<div class="aspect-[2/3] relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A dramatic cinematic cover illustration of a fantasy warrior standing on a cliff edge looking out over a misty valley with ancient ruins. Dark AMOLED color palette with deep greens and glowing ethereal accents. High contrast, sharp details, graphic novel style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKTKEqZ9NRGAFrKAbWe7-QggFOswEX96gNYKfnGHnTln7EZqlAwT_Ea3aEspkps85jF0WYNuQaCCZMeMfoIMu9EhVStfsKQ4_WYvEr479OUMsozE7P7aCuUz1WNBUKUD-shlSNWr_YCBo3iyHl6wUtM2Py0ovfPT-c3fgvU9MpUZPHpbCKlLTqgJQihsLTe3RMbV9acuGNfa5k0BmASIm6miughkhqlzJ2jWezXHteA07Mni3jFqdyzCeq-CsxC7wvH1FHOpEKt7AH"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<button class="absolute top-2 right-2 p-2 bg-surface-container-highest/80 backdrop-blur-md rounded-full text-on-surface opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-variant active:scale-90">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Echoes of the Ancients</h3>
+<div class="flex justify-between items-center text-on-surface-variant font-label-sm text-label-sm">
+<span>415 MB</span>
+<span>Sep 28</span>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="comic-card rounded-[24px] overflow-hidden flex flex-col group relative">
+<div class="aspect-[2/3] relative overflow-hidden bg-surface-container-low flex items-center justify-center">
+<!-- Example of a placeholder for a generating file or error state -->
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A moody, stylized illustration of a lone astronaut floating in deep space near a glowing nebula. AMOLED black background with vivid purple and indigo starbursts. Premium comic book aesthetic, high contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuArnuRIhktD25BbPqpcbvOfI07I5-JGIsXIZOUWjTT6j9tYe_ZGPgIRHXNT5L9XjOy0KyieiUsDPIpJwMZETduOsryXih7N19gfk2tOmrN_LJgpIZB9XqKkKsE9Ks1T05VFBvA_dnY7zowfofDZT8aR3bLUt_3w2PvLp36G9xLEgqcIJCNhtazeHGZbtXuHKtvh_8-dChqX4Tjde3qqzPhZ5JRRme8wnYSaVKR4an9_YA0YA-P2BeAYSzRiLWfGkFxzjwiPUwJ0vYFz"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<button class="absolute top-2 right-2 p-2 bg-surface-container-highest/80 backdrop-blur-md rounded-full text-on-surface opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-variant active:scale-90">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Void Walker #4</h3>
+<div class="flex justify-between items-center text-on-surface-variant font-label-sm text-label-sm">
+<span>180 MB</span>
+<span>Aug 04</span>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="comic-card rounded-[24px] overflow-hidden flex flex-col group relative">
+<div class="aspect-[2/3] relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A gritty, noir-style comic cover featuring a detective silhouetted against a rainy window overlooking a dark city street. Heavy shadows, high contrast AMOLED blacks, with a single source of warm amber light. Cinematic and atmospheric." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZluokle5sAOHCefNoBh2TvWpx25z3hGOhy7oFvCjMmoqgjFqxKykLTW0-yUp6raOKaZd7kKCz2ridKfq7wzIkjuO7b0pkVdteSwZ0mNcVsklpHJuuNgxduNSaVr6ovDqXyGiOsRVWktWd7M8gUqKf234u3tUDK-9KwH25joQ_EJVaYfggncH5epDNiJ51uMCZf1JsCkvSijnHrTp9GB5YVamqPhzIJfhnu4d0vVVGtbRQi3QWdBSV7mG7_l5rK51g7eWwOalyREpZ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<button class="absolute top-2 right-2 p-2 bg-surface-container-highest/80 backdrop-blur-md rounded-full text-on-surface opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-variant active:scale-90">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Midnight Sun</h3>
+<div class="flex justify-between items-center text-on-surface-variant font-label-sm text-label-sm">
+<span>290 MB</span>
+<span>Jul 15</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe backdrop-blur-2xl border-t border-outline-variant/10 bg-surface-container-lowest/80 dark:bg-surface-container-lowest/80 text-primary dark:text-primary-fixed-dim md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 0;">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 0;">download_for_offline</span>
+<span class="font-label-sm text-label-sm">Downloads</span>
+</button>
+<!-- Active Tab -->
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1 active:scale-90 duration-150">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-label-sm text-label-sm">Library</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 0;">favorite</span>
+<span class="font-label-sm text-label-sm">Favorites</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</button>
+</nav>
+</body></html>

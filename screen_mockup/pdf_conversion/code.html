@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Comic Downloader - PDF Conversion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#131313",
+                      "tertiary": "#ffb2b7",
+                      "on-error-container": "#ffdad6",
+                      "outline": "#908fa0",
+                      "on-secondary-fixed-variant": "#005048",
+                      "inverse-surface": "#e5e2e1",
+                      "surface-variant": "#353534",
+                      "surface-container-high": "#2a2a2a",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "secondary-container": "#04b4a2",
+                      "primary-container": "#8083ff",
+                      "on-primary-fixed": "#07006c",
+                      "on-background": "#e5e2e1",
+                      "secondary-fixed-dim": "#4fdbc8",
+                      "tertiary-container": "#ff516a",
+                      "inverse-on-surface": "#313030",
+                      "on-primary-container": "#0d0096",
+                      "error": "#ffb4ab",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-container-low": "#1c1b1b",
+                      "primary": "#c0c1ff",
+                      "on-error": "#690005",
+                      "tertiary-fixed": "#ffdadb",
+                      "on-tertiary-container": "#5b0017",
+                      "on-surface": "#e5e2e1",
+                      "on-tertiary-fixed": "#40000d",
+                      "surface-bright": "#393939",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-tertiary": "#67001b",
+                      "surface-tint": "#c0c1ff",
+                      "outline-variant": "#464554",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-container": "#201f1f",
+                      "inverse-primary": "#494bd6",
+                      "surface-container-highest": "#353534",
+                      "error-container": "#93000a",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-secondary-container": "#003f38",
+                      "on-secondary": "#003731",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-dim": "#131313",
+                      "surface": "#131313",
+                      "secondary": "#4fdbc8",
+                      "secondary-fixed": "#71f8e4",
+                      "on-primary": "#1000a9",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-secondary-fixed": "#00201c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "md": "16px",
+                      "margin-tablet": "24px",
+                      "xs": "4px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "lg": "24px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "label-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.25px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-lg": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "57px",
+                              {
+                                      "lineHeight": "64px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.1px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .progress-bar-stripes {
+            background-image: linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.15) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.15) 50%,
+                rgba(255, 255, 255, 0.15) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 1rem 1rem;
+            animation: progress-stripes 1s linear infinite;
+        }
+
+        @keyframes progress-stripes {
+            from { background-position: 1rem 0; }
+            to { background-position: 0 0; }
+        }
+
+        .pulse-glow {
+            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(4, 180, 162, 0.5); }
+            50% { opacity: .7; box-shadow: 0 0 40px rgba(4, 180, 162, 0.8); }
+        }
+
+        .page-flip-container {
+            perspective: 1000px;
+        }
+
+        .page-flip {
+            animation: flip 3s linear infinite;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+        }
+        
+        @keyframes flip {
+            0% { transform: rotateY(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: rotateY(-180deg); opacity: 0; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-lg">
+<!-- Top Navigation (Shell suppressed for this transactional flow as per guidelines) -->
+<main class="flex-grow flex flex-col items-center justify-center p-margin-mobile md:p-margin-tablet pb-[96px] md:pb-margin-tablet">
+<div class="w-full max-w-lg bg-surface-container rounded-[24px] border border-primary/10 overflow-hidden relative shadow-2xl z-10">
+<!-- Abstract background effect inside card -->
+<div class="absolute inset-0 opacity-20 pointer-events-none" style="background: radial-gradient(circle at top right, var(--tw-colors-secondary-container), transparent 60%);"></div>
+<div class="p-lg md:p-xl relative z-20 flex flex-col items-center text-center">
+<!-- Animation Container -->
+<div class="w-48 h-64 mb-lg relative page-flip-container flex items-center justify-center">
+<!-- Stack of pages base -->
+<div class="absolute inset-0 bg-surface-variant rounded-lg border border-outline-variant shadow-lg transform translate-y-2 translate-x-2"></div>
+<div class="absolute inset-0 bg-surface-container-high rounded-lg border border-outline-variant shadow-lg transform translate-y-1 translate-x-1"></div>
+<!-- Cover image -->
+<div class="absolute inset-0 bg-surface rounded-lg border border-primary/30 shadow-xl overflow-hidden z-10 flex flex-col">
+<div class="bg-cover bg-center w-full flex-grow" data-alt="A stylized, cinematic illustration of a futuristic cityscape at night, rendered in high contrast deep blacks and vibrant neon indigo. The style resembles a premium modern comic book cover, with dramatic lighting and sharp angles." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBha8XijPLb2Ztl2O0qOLNkHKPYcAB_wF2ibiC1u_QEWDBF-i4W_pKE7Mh9Q0nO3qlPoOgYHdrdMhIKHBAqwjTrZQ5MbFlMLpSyJSbpZ0-90obe8kx87f9BJsciIboUFNjrP-RkpQDN70iUorL6AbeTqxi1JNH6IArfkt-eMjE-87R_Gy217vRsRMmVAX2DIfPl29oV5MVkOjfm-XNDsu8F0d1QZqzfaoPcVhDbyW1iwI3zPBQvk3B_yrLWLZQdJAHxsdEyUIpUFEF8')"></div>
+<div class="h-8 bg-surface-container-lowest flex items-center justify-center border-t border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary text-[16px]">picture_as_pdf</span>
+</div>
+</div>
+<!-- Flipping pages -->
+<div class="absolute inset-0 bg-surface-container rounded-lg border border-outline-variant overflow-hidden z-20 page-flip" style="animation-delay: 0s;">
+<div class="bg-cover bg-center w-full h-full opacity-50 grayscale" data-alt="A highly detailed comic book panel showing an intense close-up of a character's eyes. The artwork is stark black and white with a single vibrant teal accent. The style is modern, cinematic, and high-contrast." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1hf4nhWKxuDWpKhWjpAVux_EWKvZtZoL447V0o8DPQ5qvhXzWCXQBke3DmBxqCmCFAa77vFXbB2LVdaWcwTi5GXZY2rgbGahtpXTitTSekY0dLCy_1QqGQ7k-BNRtkDE-KpjFJlpFaiUTfnZSreUIHSUW59_6xlcDwLVicZAQ0OEHTzTFCgkZ-iNBw2BnCWCj6FQpH9HUJHKa9SesxYeWYs7Yo8l5qo-yQTR1xku0FqnufTjVw2FXihn1kTEnlErCXpmHEWJKxFDb')"></div>
+</div>
+<div class="absolute inset-0 bg-surface-container rounded-lg border border-outline-variant overflow-hidden z-20 page-flip" style="animation-delay: 1s;">
+<div class="bg-cover bg-center w-full h-full opacity-50 grayscale" data-alt="A dynamic comic book action scene rendered in a minimalist style. Deep shadows dominate the composition, with striking lines indicating fast movement. The overall aesthetic is dark mode optimized with subtle indigo highlights." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDKvp3MNVSFldBVuKCNJw0Nmb0oLj2TyBFE2S8tNxc-eY3vSTxXWAEjvH-hvzFB5lBMjkYRYX-UYwtK7r-ezDclmAbXMBI26To9Vlx-nKXTrQfsy1lVdW2yyjdGzhVaOttzePDD_KQ5K8pDYGR7Y4xDrC18_4eBvppPKdafXYC7ypUFHRbRgFSniBDocaHwU7hUZhEIIM7H-OkbBIohGwJEfe6GskHSHp30rDFUUifcCBGSeZDFBo2HUv6YBaQNnm5TRy2Ev__DDqMz')"></div>
+</div>
+<div class="absolute inset-0 bg-surface-container rounded-lg border border-outline-variant overflow-hidden z-20 page-flip" style="animation-delay: 2s;">
+<div class="bg-cover bg-center w-full h-full opacity-50 grayscale" data-alt="A sweeping establishing shot of a sci-fi landscape in a comic book style. The terrain is jagged and alien, illuminated by a large, glowing celestial body. The color palette is restricted to deep blacks, dark greys, and luminous teal." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLs58HZd6ZLXRobM1mIhml2z8I5_tu654GUTJ6wkHtPS8jUM3DAyQjD-LCLcKr0KdT3F0GPAjj4twiX3TT9vRbeOxC_UctfC8UHVGa9kbVlv2skvAgdIJYp2yF8gnuU2QnqU8oPB1MuzLqVJ1HJg3AkCjrDAhmZ9DlDQNyWrzi4YMlw-1zcq9DWT6Ogl3lEMZR2i07jLlnqKYuM5MpuJ9Uo4acYvzYCYUgOqV9oc4wyTmjiHZKyVSBp4JmUabQUpYUCsAsw0CefH_I')"></div>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-sm">Merging Images...</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl">Converting 'Neon Genesis Vol. 1' to PDF</p>
+<!-- Progress Bar -->
+<div class="w-full mb-lg">
+<div class="flex justify-between items-end mb-xs">
+<span class="font-label-sm text-label-sm text-secondary">68% Complete</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">42/61 Pages</span>
+</div>
+<div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/20">
+<div class="h-full bg-secondary-container progress-bar-stripes rounded-full pulse-glow" style="width: 68%;"></div>
+</div>
+</div>
+<!-- Conversion Options -->
+<div class="w-full bg-surface-container-low rounded-xl p-md border border-outline-variant/30 mb-xl flex flex-col gap-sm text-left">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-lg text-label-lg text-on-surface">Quality Settings</span>
+<span class="font-label-sm text-label-sm text-primary px-2 py-1 bg-primary/10 rounded-full">Est. Size: 45MB</span>
+</div>
+<label class="flex items-center gap-md p-md rounded-lg bg-surface-container cursor-pointer border border-secondary/50 hover:bg-surface-variant/50 transition-colors">
+<div class="flex-shrink-0 relative flex items-center justify-center w-5 h-5">
+<input checked="" class="peer sr-only" name="quality" type="radio"/>
+<div class="w-5 h-5 rounded-full border-2 border-secondary peer-checked:border-secondary flex items-center justify-center">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface">High Quality</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-xs">Best for high-res displays</span>
+</div>
+</label>
+<label class="flex items-center gap-md p-md rounded-lg bg-surface-container-highest cursor-pointer border border-transparent hover:bg-surface-variant/50 transition-colors">
+<div class="flex-shrink-0 relative flex items-center justify-center w-5 h-5">
+<input class="peer sr-only" name="quality" type="radio"/>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant peer-checked:border-secondary flex items-center justify-center">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface">Compressed</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-xs">Smaller file size</span>
+</div>
+</label>
+</div>
+<!-- Actions -->
+<button class="w-full py-md px-lg bg-surface-variant text-error rounded-xl font-label-lg text-label-lg border border-error/20 hover:bg-error/10 transition-colors flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-[20px]">cancel</span>
+                    Cancel Conversion
+                </button>
+</div>
+</div>
+</main>
+<!-- Script to simulate completion state after a few seconds -->
+<script>
+        setTimeout(() => {
+            const h1 = document.querySelector('h1');
+            const p = document.querySelector('h1 + p');
+            const progressContainer = document.querySelector('.w-full.mb-lg');
+            const optionsContainer = document.querySelector('.w-full.bg-surface-container-low');
+            const cancelButton = document.querySelector('button');
+            const animationContainer = document.querySelector('.page-flip-container');
+            const coverImage = document.querySelector('.bg-surface.rounded-lg.z-10');
+
+            if(h1 && p && progressContainer && optionsContainer && cancelButton && animationContainer && coverImage) {
+                // Update text
+                h1.textContent = 'Conversion Complete';
+                h1.classList.replace('text-primary', 'text-secondary');
+                p.textContent = 'PDF saved to your Downloads.';
+                
+                // Hide progress and options
+                progressContainer.style.display = 'none';
+                optionsContainer.style.display = 'none';
+
+                // Update Button
+                cancelButton.innerHTML = '<span class="material-symbols-outlined text-[20px]">folder_open</span> Open File';
+                cancelButton.className = 'w-full py-md px-lg bg-secondary-container text-on-secondary-container rounded-xl font-label-lg text-label-lg hover:bg-secondary-container/80 transition-colors flex items-center justify-center gap-sm mt-md';
+
+                // Stop flipping animation and show success state on cover
+                const flipPages = document.querySelectorAll('.page-flip');
+                flipPages.forEach(page => page.style.display = 'none');
+                
+                // Add success checkmark to cover
+                const checkmark = document.createElement('div');
+                checkmark.className = 'absolute inset-0 bg-secondary/20 flex items-center justify-center backdrop-blur-sm z-30 transition-opacity duration-500 opacity-0';
+                checkmark.innerHTML = '<div class="w-16 h-16 rounded-full bg-secondary flex items-center justify-center shadow-lg transform scale-50 transition-transform duration-500 delay-100" id="success-icon-bg"><span class="material-symbols-outlined text-on-secondary text-[32px]">check</span></div>';
+                coverImage.appendChild(checkmark);
+                
+                // Trigger reflow
+                void checkmark.offsetWidth;
+                
+                checkmark.classList.remove('opacity-0');
+                checkmark.classList.add('opacity-100');
+                setTimeout(() => {
+                    document.getElementById('success-icon-bg').classList.remove('scale-50');
+                    document.getElementById('success-icon-bg').classList.add('scale-100');
+                }, 50);
+
+                // Add a primary button for reading
+                const readButton = document.createElement('button');
+                readButton.innerHTML = '<span class="material-symbols-outlined text-[20px]">auto_stories</span> Read Now';
+                readButton.className = 'w-full py-md px-lg bg-primary text-on-primary rounded-xl font-label-lg text-label-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-sm mt-md shadow-lg';
+                
+                cancelButton.parentNode.insertBefore(readButton, cancelButton);
+            }
+        }, 5000); // Simulate completion after 5 seconds
+    </script>
+</body></html>

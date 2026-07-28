@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Link Analysis - InkFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#131313",
+                      "tertiary": "#ffb2b7",
+                      "on-error-container": "#ffdad6",
+                      "outline": "#908fa0",
+                      "on-secondary-fixed-variant": "#005048",
+                      "inverse-surface": "#e5e2e1",
+                      "surface-variant": "#353534",
+                      "surface-container-high": "#2a2a2a",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "secondary-container": "#04b4a2",
+                      "primary-container": "#8083ff",
+                      "on-primary-fixed": "#07006c",
+                      "on-background": "#e5e2e1",
+                      "secondary-fixed-dim": "#4fdbc8",
+                      "tertiary-container": "#ff516a",
+                      "inverse-on-surface": "#313030",
+                      "on-primary-container": "#0d0096",
+                      "error": "#ffb4ab",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-container-low": "#1c1b1b",
+                      "primary": "#c0c1ff",
+                      "on-error": "#690005",
+                      "tertiary-fixed": "#ffdadb",
+                      "on-tertiary-container": "#5b0017",
+                      "on-surface": "#e5e2e1",
+                      "on-tertiary-fixed": "#40000d",
+                      "surface-bright": "#393939",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-tertiary": "#67001b",
+                      "surface-tint": "#c0c1ff",
+                      "outline-variant": "#464554",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-container": "#201f1f",
+                      "inverse-primary": "#494bd6",
+                      "surface-container-highest": "#353534",
+                      "error-container": "#93000a",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-secondary-container": "#003f38",
+                      "on-secondary": "#003731",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-dim": "#131313",
+                      "surface": "#131313",
+                      "secondary": "#4fdbc8",
+                      "secondary-fixed": "#71f8e4",
+                      "on-primary": "#1000a9",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-secondary-fixed": "#00201c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "md": "16px",
+                      "margin-tablet": "24px",
+                      "xs": "4px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "lg": "24px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "label-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                      "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                      "label-sm": ["11px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .spin-slow {
+            animation: spin 3s linear infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        .pulse-ring-anim {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg antialiased min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+<!-- Top App Bar (Suppressed due to linear/transactional intent, but added a close action for modal context) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-transparent">
+<button class="p-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<!-- Main Content Canvas (Modal-like centered view) -->
+<main class="w-full max-w-md px-margin-mobile flex flex-col items-center justify-center z-10 relative">
+<!-- Loading State Area (Simulating transition from analyzing to loaded) -->
+<div class="flex flex-col items-center justify-center w-full transition-opacity duration-500 opacity-100 absolute inset-0 z-20 bg-background/95 backdrop-blur-md" id="loading-state">
+<div class="relative w-32 h-32 flex items-center justify-center mb-lg">
+<!-- Outer decorative ring -->
+<div class="absolute inset-0 rounded-full border-2 border-primary/20 spin-slow"></div>
+<!-- Inner progress ring -->
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-primary/10" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary transition-all duration-1000 ease-in-out" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="283" stroke-dashoffset="70" stroke-width="4"></circle>
+</svg>
+<!-- Center Icon -->
+<span class="material-symbols-outlined text-display-lg text-primary pulse-ring-anim">search</span>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-xs">Analyzing Link...</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Extracting metadata from source</p>
+</div>
+<!-- Result Card Area (Initially hidden, revealed after 'analysis') -->
+<div class="w-full flex flex-col gap-lg transition-opacity duration-500 opacity-0 translate-y-4" id="result-state">
+<!-- Context Header -->
+<div class="text-center w-full">
+<div class="inline-flex items-center gap-2 bg-secondary-container/20 text-secondary border border-secondary/30 rounded-full px-3 py-1 mb-md">
+<span class="material-symbols-outlined text-sm" style="font-size: 16px;">check_circle</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Analysis Complete</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background">The Last Hero</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-xs">By Arisato Studio</p>
+</div>
+<!-- Comic Preview Card (Bento Style) -->
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-[24px] overflow-hidden flex flex-col md:flex-row shadow-lg relative">
+<!-- Ambient glow behind cover -->
+<div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none"></div>
+<!-- Cover Image -->
+<div class="w-full md:w-2/5 aspect-[2/3] relative flex-shrink-0 bg-surface-container-high border-r border-outline-variant/10">
+<img class="w-full h-full object-cover" data-alt="A cinematic, high-contrast comic book cover illustration featuring a lone cybernetic hero standing atop a neon-lit futuristic skyscraper at night. Deep indigo skies contrast with vibrant cyan and magenta glowing accents. The art style is modern digital painting with sharp, dramatic lighting, fitting a premium digital reading app set in AMOLED dark mode." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoSVQB-Mgndw8ZYfg2Ic1tr1zvUqzgO9E_yE2ZGNtkKQ9Hd7k32ketkkioYb1uIwbTcs4OU3-EbM3lUxEK98gJPfOp9pyyucuBU2fA4FXqJwdzIrxklxdbqtpktOTJmnf65fFcjV0FRmjW0C8ZOppJnoRAY7X-2rdNvd0W6Zc4tUxO86f92L7vmCX_NRlqqvNK2Qmt1qejTJMLN4Sxo8lR5fuZ-UuTFA7ueoYIrPHkZDBMFmiaL4dXRO37-xCFwiB92ZvjKi9WW7YF"/>
+<div class="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-l-[24px]"></div>
+</div>
+<!-- Details -->
+<div class="p-md flex flex-col justify-between flex-grow gap-md z-10">
+<div class="flex flex-col gap-base">
+<!-- Source -->
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 18px;">language</span>
+<span class="font-body-md text-body-md">WebToon Canvas</span>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 gap-sm mt-sm">
+<div class="bg-surface-container-high p-sm rounded-lg border border-outline-variant/10">
+<span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Chapters</span>
+<span class="font-title-lg text-title-lg text-on-background">142</span>
+</div>
+<div class="bg-surface-container-high p-sm rounded-lg border border-outline-variant/10">
+<span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Status</span>
+<span class="font-title-lg text-title-lg text-secondary">Ongoing</span>
+</div>
+</div>
+<!-- Genres/Tags -->
+<div class="flex flex-wrap gap-xs mt-sm">
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-md">Action</span>
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-md">Sci-Fi</span>
+</div>
+</div>
+<!-- Status Bar -->
+<div class="flex items-center gap-2 bg-surface-container-highest p-sm rounded-lg mt-auto">
+<span class="material-symbols-outlined text-primary fill">cloud_done</span>
+<span class="font-label-lg text-label-lg text-on-surface">Available for download</span>
+</div>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-primary text-on-primary font-label-lg text-label-lg py-4 rounded-[16px] hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(99,102,241,0.39)]">
+<span class="material-symbols-outlined">checklist</span>
+                Select Chapters
+            </button>
+<button class="w-full bg-transparent text-primary font-label-lg text-label-lg py-4 rounded-[16px] border border-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
+                Download All (2.4 GB)
+            </button>
+</div>
+</main>
+<script>
+        // Simple simulation to switch from loading to result state for demonstration purposes
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loading-state');
+                const result = document.getElementById('result-state');
+                
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    result.classList.remove('opacity-0', 'translate-y-4');
+                    result.classList.add('opacity-100', 'translate-y-0');
+                }, 500);
+            }, 2500);
+        });
+    </script>
+</body></html>

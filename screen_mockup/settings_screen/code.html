@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings - InkFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#131313",
+                        "tertiary": "#ffb2b7",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#908fa0",
+                        "on-secondary-fixed-variant": "#005048",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "secondary-container": "#04b4a2",
+                        "primary-container": "#8083ff",
+                        "on-primary-fixed": "#07006c",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "tertiary-container": "#ff516a",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#0d0096",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#c0c1ff",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#5b0017",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#40000d",
+                        "surface-bright": "#393939",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary": "#67001b",
+                        "surface-tint": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container": "#201f1f",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-highest": "#353534",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-secondary-container": "#003f38",
+                        "on-secondary": "#003731",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "surface": "#131313",
+                        "secondary": "#4fdbc8",
+                        "secondary-fixed": "#71f8e4",
+                        "on-primary": "#1000a9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#00201c"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "xl": "32px",
+                        "md": "16px",
+                        "margin-tablet": "24px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "sm": "8px"
+                    },
+                    fontFamily: {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0.5px", fontWeight: "400" }],
+                        "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0.25px", fontWeight: "400" }],
+                        "title-lg": ["22px", { lineHeight: "28px", fontWeight: "500" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
+                        "display-lg": ["57px", { lineHeight: "64px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "headline-lg-mobile": ["28px", { lineHeight: "36px", fontWeight: "600" }],
+                        "label-sm": ["11px", { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" }],
+                        "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: 300;
+            font-style: normal;
+            font-size: 24px;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        
+        /* Custom Switch Styling to match M3 on AMOLED */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: theme('colors.primary');
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: theme('colors.primary');
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+        .toggle-label {
+            width: 52px;
+            height: 32px;
+            background-color: theme('colors.surface-container-highest');
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid theme('colors.outline');
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: theme('colors.primary');
+            border-color: theme('colors.primary');
+        }
+        .toggle-label:after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background-color: theme('colors.outline');
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            background-color: theme('colors.on-primary');
+            transform: translateX(20px);
+        }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Prevent tap highlight on mobile */
+        * { -webkit-tap-highlight-color: transparent; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 backdrop-blur-xl bg-background/80 dark:bg-background/80">
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<div class="flex-1 text-center">
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">InkFlow</h1>
+</div>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-tablet max-w-screen-md mx-auto">
+<div class="mb-8">
+<h2 class="font-display-lg text-headline-lg-mobile md:text-display-lg text-on-background">Settings</h2>
+</div>
+<!-- Download Section -->
+<section class="mb-8">
+<h3 class="font-label-lg text-label-lg text-primary px-4 mb-3 uppercase tracking-wider">Download</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-outline-variant/10">
+<!-- List Item: Concurrent -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">sync_alt</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Concurrent downloads</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Number of active tasks</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-primary">3</span>
+</div>
+<!-- Divider -->
+<div class="h-px bg-outline-variant/20 ml-16"></div>
+<!-- List Item: Wi-Fi Only -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">wifi</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Download over Wi-Fi only</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Pause downloads on cellular data</p>
+</div>
+</div>
+<div class="relative inline-block w-14 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 opacity-0" id="toggle-wifi" name="toggle-wifi" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer" for="toggle-wifi"></label>
+</div>
+</div>
+<!-- Divider -->
+<div class="h-px bg-outline-variant/20 ml-16"></div>
+<!-- List Item: Speed limit -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">speed</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Speed limit</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Throttle download bandwidth</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant">None</span>
+</div>
+</div>
+</section>
+<!-- Storage Section -->
+<section class="mb-8">
+<h3 class="font-label-lg text-label-lg text-primary px-4 mb-3 uppercase tracking-wider">Storage</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-outline-variant/10">
+<!-- List Item: Folder -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">folder</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Download folder</p>
+<p class="font-body-md text-body-md text-on-surface-variant truncate max-w-[200px] md:max-w-xs">/storage/emulated/0/InkFlow/Comics</p>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="h-px bg-outline-variant/20 ml-16"></div>
+<!-- List Item: Cache -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">delete</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Clear cache</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Free up space used by temporary images</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-error">1.2 GB</span>
+</div>
+</div>
+</section>
+<!-- PDF Section -->
+<section class="mb-8">
+<h3 class="font-label-lg text-label-lg text-primary px-4 mb-3 uppercase tracking-wider">PDF Export</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-outline-variant/10">
+<!-- List Item: Quality -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">high_quality</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Export quality</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Resolution for generated PDFs</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-primary">Original</span>
+</div>
+<!-- Divider -->
+<div class="h-px bg-outline-variant/20 ml-16"></div>
+<!-- List Item: Compression -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">compress</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Image compression</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Reduce file size of PDFs</p>
+</div>
+</div>
+<div class="relative inline-block w-14 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 opacity-0" id="toggle-compress" name="toggle-compress" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer" for="toggle-compress"></label>
+</div>
+</div>
+<!-- Divider -->
+<div class="h-px bg-outline-variant/20 ml-16"></div>
+<!-- List Item: Page size -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">aspect_ratio</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">Page size</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Fit mode for images</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant">Match Image</span>
+</div>
+</div>
+</section>
+<!-- Appearance Section -->
+<section class="mb-12">
+<h3 class="font-label-lg text-label-lg text-primary px-4 mb-3 uppercase tracking-wider">Appearance</h3>
+<div class="bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-outline-variant/10">
+<!-- List Item: Theme -->
+<div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 transition-colors cursor-pointer active:scale-[0.99] duration-150">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">dark_mode</span>
+<div>
+<p class="font-body-lg text-body-lg text-on-background">App Theme</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Current visual style</p>
+</div>
+</div>
+<span class="font-body-md text-body-md text-primary">AMOLED Dark</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe backdrop-blur-2xl border-t border-outline-variant/10 bg-surface-container-lowest/80 dark:bg-surface-container-lowest/80">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 w-16 py-1">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 w-16 py-1">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">download_for_offline</span>
+<span class="font-label-sm text-label-sm">Downloads</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 w-16 py-1">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">auto_stories</span>
+<span class="font-label-sm text-label-sm">Library</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 w-16 py-1">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">favorite</span>
+<span class="font-label-sm text-label-sm">Favorites</span>
+</button>
+<!-- Active Tab: Settings -->
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1 transition-all active:scale-90 duration-150">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</button>
+</nav>
+</body></html>

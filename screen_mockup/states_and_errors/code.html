@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InkFlow - Empty &amp; Error States</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#131313",
+                        "tertiary": "#ffb2b7",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#908fa0",
+                        "on-secondary-fixed-variant": "#005048",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "secondary-container": "#04b4a2",
+                        "primary-container": "#8083ff",
+                        "on-primary-fixed": "#07006c",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "tertiary-container": "#ff516a",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#0d0096",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#c0c1ff",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#5b0017",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#40000d",
+                        "surface-bright": "#393939",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary": "#67001b",
+                        "surface-tint": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container": "#201f1f",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-highest": "#353534",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-secondary-container": "#003f38",
+                        "on-secondary": "#003731",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "surface": "#131313",
+                        "secondary": "#4fdbc8",
+                        "secondary-fixed": "#71f8e4",
+                        "on-primary": "#1000a9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#00201c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "md": "16px",
+                        "margin-tablet": "24px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen font-body-lg flex flex-col md:flex-row pb-20 md:pb-0 pt-16">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 backdrop-blur-xl bg-background/80 md:hidden">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">menu</span>
+</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tight">InkFlow</span>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">search</span>
+</button>
+</header>
+<header class="hidden md:flex fixed top-0 left-0 w-full z-50 justify-between items-center px-lg h-16 backdrop-blur-xl bg-background/80 border-b border-surface-variant/30">
+<div class="flex items-center gap-md">
+<button class="text-primary hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">menu</span>
+</button>
+<span class="font-headline-lg text-headline-lg text-primary tracking-tight">InkFlow</span>
+</div>
+<nav class="flex gap-md h-full">
+<button class="flex items-center px-4 h-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/20 transition-colors">
+<span class="material-symbols-outlined mr-2" style="font-variation-settings: 'FILL' 0, 'wght' 200;">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</button>
+<button class="flex items-center px-4 h-full text-primary border-b-2 border-primary">
+<span class="material-symbols-outlined mr-2" style="font-variation-settings: 'FILL' 1, 'wght' 400;">download_for_offline</span>
+<span class="font-label-lg text-label-lg">Downloads</span>
+</button>
+<button class="flex items-center px-4 h-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/20 transition-colors">
+<span class="material-symbols-outlined mr-2" style="font-variation-settings: 'FILL' 0, 'wght' 200;">auto_stories</span>
+<span class="font-label-lg text-label-lg">Library</span>
+</button>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">search</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 w-full max-w-7xl mx-auto p-margin-mobile md:p-margin-tablet lg:p-xl flex flex-col gap-xl overflow-hidden mt-16 md:mt-0">
+<div class="mb-lg">
+<h1 class="font-display-lg text-display-lg text-on-surface mb-2">State Presentation</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Reviewing empty and error states for the comic downloader flow.</p>
+</div>
+<!-- Presentation Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg lg:gap-xl h-full">
+<!-- Empty State: No Downloads -->
+<section class="bg-surface-container-low rounded-xl border border-surface-variant/50 p-lg flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]">
+<div class="absolute inset-0 opacity-5 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary via-background to-background pointer-events-none"></div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-48 h-48 mb-lg bg-surface-variant/20 rounded-full flex items-center justify-center shadow-lg border border-surface-variant/30 backdrop-blur-sm">
+<span class="material-symbols-outlined text-surface-variant text-[120px]" style="font-variation-settings: 'FILL' 0, 'wght' 100;">cloud_off</span>
+</div>
+<h2 class="font-title-lg text-title-lg text-on-surface mb-xs">No Active Downloads</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-lg">Your download queue is empty. Paste a comic URL or browse the library to start saving for offline reading.</p>
+<div class="flex gap-md w-full max-w-xs flex-col sm:flex-row">
+<button class="flex-1 bg-primary text-on-primary font-label-lg text-label-lg py-3 px-6 rounded-xl hover:bg-primary/90 transition-colors active:scale-95 flex items-center justify-center shadow-[0_4px_14px_0_rgba(99,102,241,0.39)]">
+<span class="material-symbols-outlined mr-2" style="font-variation-settings: 'FILL' 0, 'wght' 400;">content_paste</span>
+                            Paste URL
+                        </button>
+</div>
+</div>
+<div class="absolute bottom-4 left-4 font-label-sm text-label-sm text-on-surface-variant/50 tracking-widest uppercase">State: Empty</div>
+</section>
+<!-- Error States Container -->
+<div class="flex flex-col gap-lg h-full">
+<!-- Alert Dialog: Network Timeout -->
+<section class="bg-surface-container-low rounded-xl border border-surface-variant/50 p-lg relative flex-1 flex items-center justify-center min-h-[250px]">
+<div class="absolute bottom-4 left-4 font-label-sm text-label-sm text-on-surface-variant/50 tracking-widest uppercase">State: Alert Dialog</div>
+<!-- Mock Scrim/Backdrop -->
+<div class="absolute inset-0 bg-background/60 backdrop-blur-sm rounded-xl flex items-center justify-center p-md">
+<!-- Dialog Surface -->
+<div class="bg-[#1E1E1E] rounded-xl border border-primary/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] max-w-sm w-full p-lg flex flex-col">
+<div class="flex items-center gap-sm mb-md text-error">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1, 'wght' 400;">wifi_off</span>
+<h3 class="font-title-lg text-title-lg">Network Timeout</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl">
+                                 The connection to the server timed out while attempting to download "The Dark Knight Returns Issue #1". Please check your connection and try again.
+                             </p>
+<div class="flex justify-end gap-sm mt-auto">
+<button class="text-primary font-label-lg text-label-lg py-2 px-4 rounded-lg hover:bg-primary/10 transition-colors">
+                                     Cancel
+                                 </button>
+<button class="bg-primary/10 text-primary font-label-lg text-label-lg py-2 px-4 rounded-lg hover:bg-primary/20 transition-colors flex items-center">
+<span class="material-symbols-outlined mr-1 text-[18px]" style="font-variation-settings: 'FILL' 0, 'wght' 400;">refresh</span>
+                                     Retry
+                                 </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Toast: Invalid URL -->
+<section class="bg-surface-container-low rounded-xl border border-surface-variant/50 p-lg relative flex-1 flex flex-col justify-end items-center pb-xl min-h-[200px]">
+<div class="absolute top-4 left-4 font-label-sm text-label-sm text-on-surface-variant/50 tracking-widest uppercase">State: Toast / Snackbar</div>
+<!-- Mock App Content area to show toast over -->
+<div class="absolute inset-0 flex flex-col items-center justify-center opacity-20 pointer-events-none">
+<div class="w-3/4 h-12 bg-surface-variant rounded mb-4"></div>
+<div class="w-1/2 h-10 bg-primary/20 rounded"></div>
+</div>
+<!-- Toast Surface -->
+<div class="relative z-10 bg-inverse-surface text-inverse-on-surface px-4 py-3 rounded-lg shadow-lg flex items-center justify-between w-full max-w-md transform translate-y-0 transition-transform">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1, 'wght' 400;">error</span>
+<span class="font-body-md text-body-md">Invalid or unsupported URL</span>
+</div>
+<button class="text-inverse-primary font-label-lg text-label-lg ml-md hover:underline">
+                             Dismiss
+                         </button>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe backdrop-blur-2xl bg-surface-container-lowest/80 border-t-0 md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1 active:scale-90 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1, 'wght' 400;">download_for_offline</span>
+<span class="font-label-sm text-label-sm mt-1">Downloads</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">auto_stories</span>
+<span class="font-label-sm text-label-sm mt-1">Library</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">favorite</span>
+<span class="font-label-sm text-label-sm mt-1">Favorites</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 p-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0, 'wght' 200;">settings</span>
+<span class="font-label-sm text-label-sm mt-1">Settings</span>
+</button>
+</nav>
+</body></html>

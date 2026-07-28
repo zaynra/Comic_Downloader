@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Comic Downloader - Splash</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "background": "#131313",
+                    "tertiary": "#ffb2b7",
+                    "on-error-container": "#ffdad6",
+                    "outline": "#908fa0",
+                    "on-secondary-fixed-variant": "#005048",
+                    "inverse-surface": "#e5e2e1",
+                    "surface-variant": "#353534",
+                    "surface-container-high": "#2a2a2a",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "secondary-container": "#04b4a2",
+                    "primary-container": "#8083ff",
+                    "on-primary-fixed": "#07006c",
+                    "on-background": "#e5e2e1",
+                    "secondary-fixed-dim": "#4fdbc8",
+                    "tertiary-container": "#ff516a",
+                    "inverse-on-surface": "#313030",
+                    "on-primary-container": "#0d0096",
+                    "error": "#ffb4ab",
+                    "on-tertiary-fixed-variant": "#92002a",
+                    "surface-container-low": "#1c1b1b",
+                    "primary": "#c0c1ff",
+                    "on-error": "#690005",
+                    "tertiary-fixed": "#ffdadb",
+                    "on-tertiary-container": "#5b0017",
+                    "on-surface": "#e5e2e1",
+                    "on-tertiary-fixed": "#40000d",
+                    "surface-bright": "#393939",
+                    "primary-fixed-dim": "#c0c1ff",
+                    "on-tertiary": "#67001b",
+                    "surface-tint": "#c0c1ff",
+                    "outline-variant": "#464554",
+                    "primary-fixed": "#e1e0ff",
+                    "surface-container": "#201f1f",
+                    "inverse-primary": "#494bd6",
+                    "surface-container-highest": "#353534",
+                    "error-container": "#93000a",
+                    "on-surface-variant": "#c7c4d7",
+                    "on-secondary-container": "#003f38",
+                    "on-secondary": "#003731",
+                    "on-primary-fixed-variant": "#2f2ebe",
+                    "surface-dim": "#131313",
+                    "surface": "#131313",
+                    "secondary": "#4fdbc8",
+                    "secondary-fixed": "#71f8e4",
+                    "on-primary": "#1000a9",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-secondary-fixed": "#00201c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "md": "16px",
+                    "margin-tablet": "24px",
+                    "xs": "4px",
+                    "gutter": "16px",
+                    "margin-mobile": "16px",
+                    "base": "8px",
+                    "lg": "24px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "label-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                    "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .pulse-shadow {
+            animation: pulseShadow 2s infinite;
+        }
+        @keyframes pulseShadow {
+            0% { box-shadow: 0 0 0 0 rgba(73, 75, 214, 0.4); }
+            70% { box-shadow: 0 0 0 30px rgba(73, 75, 214, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(73, 75, 214, 0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-background min-h-screen flex items-center justify-center relative overflow-hidden font-body-lg text-body-lg">
+<!-- Faint Comic Panel Background Pattern -->
+<div class="absolute inset-0 z-0 opacity-[0.03]" data-alt="A seamless, very faint repeating background pattern consisting of blank comic book panels, dynamic action lines, and empty speech bubbles. The design is extremely subtle, monochromatic, and uses thin white lines against a pure black background, creating an atmospheric texture suited for an AMOLED dark mode high-fidelity comic app interface." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAj4mDB4MgHPVmvOqPIIbUV7YDmHcza-tMK2ebTdGyA1edEo9mB0mxKbkmgGpPy5Ug3Xn6_1OKuai54x0HqXWsVnVsR5CAhM1dbskEsW5GRYrzQeP8Q_JsR7NWcA9UpejLAsp4GCe3-2G6s4TF585DGQux58ViExaTlPE6l3eLgEKXSLKbnN02x7d-9u6cyKiNZVX-2yxVl7qxNUIQovkX0GhSPn0TpWoikUF3ARn8FEXW-UWVfI6t8pFpusc5ZOYSpeQJ04DmGvGO9')">
+</div>
+<!-- Vignette / Gradient Overlay for Depth -->
+<div class="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-surface-container-lowest/50 to-surface-container-lowest"></div>
+<!-- Main Content Container -->
+<div class="z-10 flex flex-col items-center justify-center p-xl w-full max-w-sm">
+<!-- App Logo Container -->
+<div class="relative w-32 h-32 mb-xl flex items-center justify-center">
+<!-- Glowing background layer -->
+<div class="absolute inset-0 bg-inverse-primary rounded-3xl opacity-20 blur-2xl"></div>
+<!-- Logo Icon -->
+<div class="relative w-full h-full bg-gradient-to-br from-inverse-primary to-primary-container rounded-[24px] flex items-center justify-center shadow-lg pulse-shadow border border-primary-fixed/20">
+<span class="material-symbols-outlined text-[64px] text-on-primary-container" style="font-variation-settings: 'FILL' 1;">
+                    bolt
+                </span>
+</div>
+</div>
+<!-- App Title -->
+<h1 class="font-display-lg text-display-lg text-primary tracking-tighter text-center mb-sm">
+            InkFlow
+        </h1>
+<p class="font-title-lg text-title-lg text-on-surface-variant mb-xl text-center">
+            Comic Downloader
+        </p>
+<!-- Loading Indicator -->
+<div class="flex gap-base mt-lg">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim animate-bounce"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim animate-bounce" style="animation-delay: 150ms;"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim animate-bounce" style="animation-delay: 300ms;"></div>
+</div>
+<p class="font-label-sm text-label-sm text-outline mt-md uppercase tracking-widest">
+            Syncing Library
+        </p>
+</div>
+</body></html>

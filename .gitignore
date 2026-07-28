@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -5,7 +6,6 @@ bot_store.json
 telegram_listener_offset.txt
 listener_crash.log
 junk_signatures.json
-.vscode/
 Komik/
 merged_sources/
 enhanced_images/
@@ -14,3 +14,14 @@ comics/
 *.epub
 *.pdf
 notification_config.json
+
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.lock
+*.iml
+.idea/
+.vscode/
+*.g.dart
+*.freezed.dart

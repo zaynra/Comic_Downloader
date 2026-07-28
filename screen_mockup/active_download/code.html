@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Active Download - InkFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#131313",
+                        "tertiary": "#ffb2b7",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#908fa0",
+                        "on-secondary-fixed-variant": "#005048",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "secondary-container": "#04b4a2",
+                        "primary-container": "#8083ff",
+                        "on-primary-fixed": "#07006c",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "tertiary-container": "#ff516a",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#0d0096",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#c0c1ff",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#5b0017",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#40000d",
+                        "surface-bright": "#393939",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary": "#67001b",
+                        "surface-tint": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container": "#201f1f",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-highest": "#353534",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-secondary-container": "#003f38",
+                        "on-secondary": "#003731",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "surface": "#131313",
+                        "secondary": "#4fdbc8",
+                        "secondary-fixed": "#71f8e4",
+                        "on-primary": "#1000a9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#00201c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "md": "16px",
+                        "margin-tablet": "24px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .circular-progress {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            animation: progress-animation 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes progress-animation {
+            to { stroke-dashoffset: 130; } /* ~54% */
+        }
+        .log-entry {
+            opacity: 0;
+            animation: fade-up 0.3s ease-out forwards;
+        }
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-lg overflow-hidden">
+<!-- Top Navigation (Suppressed - Task-Focused Screen) -->
+<header class="flex items-center justify-between p-4 z-10 relative bg-background/90 backdrop-blur-md">
+<button class="text-on-surface-variant hover:bg-surface-variant/50 p-2 rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined font-[300]" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<div class="text-center">
+<h1 class="font-title-lg text-title-lg text-on-surface">Neon Genesis - Volume 1</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Chapter 42 of 150</p>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-variant/50 p-2 rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined font-[300]" style="font-variation-settings: 'FILL' 0;">more_vert</span>
+</button>
+</header>
+<main class="flex-grow flex flex-col items-center justify-center p-6 relative z-0">
+<!-- Background Cover Blur -->
+<div class="absolute inset-0 z-[-1] opacity-20 bg-cover bg-center" data-alt="A stylized, high-contrast digital illustration of a futuristic cityscape at night, heavily influenced by cyberpunk aesthetics. Deep AMOLED blacks dominate the shadows, while vibrant neon indigo and teal accents streak across the buildings. The mood is tense and atmospheric, cinematic lighting with a slight digital noise filter applied to mimic a classic comic book cover." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBVhqfgPimV1e0GR4u-0J2qYC6j9HZVnwOosBm4xtIGbXVPzRxJXGmqy9mK3AnrVHUP0RXXVJk0Y74P4jk-B3ETkUzbviJGO0XdZg2nu0lPjZz6mNpmau0Tz9qQtfVq8XSkxoXDMALsjmjDv69eRA8ZTGEuxPgMv9QeHB3S5clc_FECb69M1qhcTe34qtRANdVVV60m8vf64qxYYArJVSxlyg-iB6s4WwZFkfAqZuC0SYJUWhMe-KJDHYKtbmcv8TYCrUuCfnz9RrmT')"></div>
+<div class="absolute inset-0 z-[-1] bg-gradient-to-t from-background via-background/80 to-transparent"></div>
+<!-- Circular Progress -->
+<div class="relative w-64 h-64 mb-8 flex items-center justify-center">
+<!-- Background Circle -->
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="stroke-surface-container-highest" cx="50" cy="50" fill="none" r="45" stroke-width="4"></circle>
+<!-- Foreground Circle (Animated) -->
+<circle class="stroke-primary circular-progress drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" cx="50" cy="50" fill="none" r="45" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<div class="text-center flex flex-col items-center z-10">
+<span class="font-display-lg text-display-lg text-primary mb-1">54%</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full border border-outline-variant/30">Page 15/28</span>
+</div>
+</div>
+<!-- Download Stats -->
+<div class="grid grid-cols-2 gap-4 w-full max-w-sm mb-12">
+<div class="bg-surface-container-high/60 backdrop-blur-md rounded-lg p-4 flex flex-col items-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary mb-2" style="font-variation-settings: 'FILL' 0;">speed</span>
+<span class="font-title-lg text-title-lg text-on-surface">5 MB/s</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Current Speed</span>
+</div>
+<div class="bg-surface-container-high/60 backdrop-blur-md rounded-lg p-4 flex flex-col items-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary mb-2" style="font-variation-settings: 'FILL' 0;">timer</span>
+<span class="font-title-lg text-title-lg text-on-surface">0:45</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Time Remaining</span>
+</div>
+</div>
+<!-- Controls -->
+<div class="flex items-center justify-center gap-6 mb-8 w-full max-w-md">
+<button class="w-14 h-14 rounded-full bg-surface-container hover:bg-surface-variant/80 flex items-center justify-center transition-all active:scale-90 border border-outline-variant/30 text-error shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">stop</span>
+</button>
+<button class="w-20 h-20 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center transition-all active:scale-95 text-on-primary shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+<span class="material-symbols-outlined text-[36px]" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="w-14 h-14 rounded-full bg-surface-container hover:bg-surface-variant/80 flex items-center justify-center transition-all active:scale-90 border border-outline-variant/30 text-on-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+</button>
+</div>
+</main>
+<!-- Log Panel (Bottom Sheet style) -->
+<div class="bg-surface-container-low border-t border-outline-variant/20 h-48 w-full p-4 flex flex-col relative z-20">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-wider">Network Log</h3>
+<div class="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
+</div>
+<div class="flex-grow overflow-y-auto font-mono text-[12px] leading-tight space-y-2 text-on-surface-variant/80 scrollbar-hide" id="log-container">
+<div class="log-entry flex gap-2"><span class="text-secondary">[10:42:01]</span> <span>Connected to server cluster ALPHA...</span></div>
+<div class="log-entry flex gap-2" style="animation-delay: 0.1s"><span class="text-secondary">[10:42:03]</span> <span>Verified manifest for Chapter 42.</span></div>
+<div class="log-entry flex gap-2" style="animation-delay: 0.2s"><span class="text-secondary">[10:42:04]</span> <span>Downloading page 14 (3.2MB)... Success.</span></div>
+<div class="log-entry flex gap-2" style="animation-delay: 0.3s"><span class="text-primary">[10:42:06]</span> <span class="text-on-surface">Downloading page 15 (2.8MB)... In progress.</span></div>
+</div>
+</div>
+</body></html>

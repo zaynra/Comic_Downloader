@@ -1,0 +1,38 @@
+name: comic_downloader
+description: Comic Downloader Mobile
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  go_router: ^14.8.1
+  google_fonts: ^6.2.1
+  file_picker: ^8.1.6
+  path_provider: ^2.1.5
+  shared_preferences: ^2.3.4
+  dio: ^5.7.0
+  html: ^0.15.5
+  path: ^1.9.1
+  collection: ^1.19.1
+  flutter_local_notifications: ^18.0.1
+  flutter_background_service_android: ^6.3.1
+  flutter_background_service: ^5.0.5
+  flutter_background_service_platform_interface: ^5.0.0
+  webview_flutter: ^4.10.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  riverpod_generator: ^2.6.3
+  build_runner: ^2.4.14
+
+flutter:
+  uses-material-design: true

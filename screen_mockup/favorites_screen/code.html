@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InkFlow - Favorites</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#131313",
+                        "tertiary": "#ffb2b7",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#908fa0",
+                        "on-secondary-fixed-variant": "#005048",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "secondary-container": "#04b4a2",
+                        "primary-container": "#8083ff",
+                        "on-primary-fixed": "#07006c",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "tertiary-container": "#ff516a",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#0d0096",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#c0c1ff",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#5b0017",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#40000d",
+                        "surface-bright": "#393939",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary": "#67001b",
+                        "surface-tint": "#c0c1ff",
+                        "outline-variant": "#464554",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container": "#201f1f",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-highest": "#353534",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#c7c4d7",
+                        "on-secondary-container": "#003f38",
+                        "on-secondary": "#003731",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "surface": "#131313",
+                        "secondary": "#4fdbc8",
+                        "secondary-fixed": "#71f8e4",
+                        "on-primary": "#1000a9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#00201c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "md": "16px",
+                        "margin-tablet": "24px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .filled-icon { font-variation-settings: 'FILL' 1, 'wght' 400; }
+        
+        /* Subtle grid background for high-end AMOLED feel */
+        .bg-grid-pattern {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(192, 193, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(192, 193, 255, 0.03) 1px, transparent 1px);
+        }
+
+        /* Glassmorphism card subtle edge */
+        .glass-edge {
+            box-shadow: inset 0 0 0 0.5px rgba(192, 193, 255, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen pb-[100px] pt-[80px] bg-grid-pattern font-body-md text-body-md">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-background/80 dark:bg-background/80 backdrop-blur-xl">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant/50 transition-colors rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary tracking-tight">InkFlow</h1>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant/50 transition-colors rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet py-lg">
+<div class="flex justify-between items-end mb-lg">
+<h2 class="font-title-lg text-title-lg text-on-surface">Favorites</h2>
+<button class="font-label-lg text-label-lg text-secondary hover:text-secondary-fixed transition-colors">
+                Select All
+            </button>
+</div>
+<!-- Bento Grid Layout for Favorites -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1 (New Chapters) -->
+<article class="bg-[#121212] glass-edge rounded-[24px] overflow-hidden flex flex-col transition-transform hover:-translate-y-1 duration-300">
+<div class="relative aspect-[2/1] w-full">
+<img class="w-full h-full object-cover" data-alt="A cinematic, high-contrast digital illustration of a futuristic cyber-samurai standing on a neon-lit rooftop in a dark, sprawling metropolis. The lighting is dramatic, with deep AMOLED blacks contrasting against electric blue and neon pink highlights, capturing the premium aesthetic of a modern digital comic cover." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6mJ-imvBLwzEgmNLJl_e9O2EtOEWRywhOpD_NyinsRqynZqJG1OiLP1CsXbjwTEURhM60lbUkp2WGfRMsOWzpi4K_PGu1QxRHbg_ABuv3XZprFRZomnOg4yNdLC3-psLkry8lihNuEN5CevDVrjYD0R5rxqafv8Hux-Y7QNBXlooK7FhiW2C_yNqIVQLa7Jmxvu10AbA1SOHpaEdXTI9qoRRi0VLmKuXeG-tQOrYsymruSouyDeay6LGKUPL6PIibekWTIjDmAZoU"/>
+<div class="absolute top-sm right-sm bg-error text-on-error font-label-sm text-label-sm px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">notifications_active</span>
+                        3 New Chapters
+                    </div>
+<!-- Gradient overlay for text readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent"></div>
+</div>
+<div class="p-md flex-1 flex flex-col justify-between">
+<div>
+<div class="flex gap-2 mb-2">
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-[8px]">Sci-Fi</span>
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-[8px]">Action</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1 line-clamp-1">Neon Ronin</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-4">
+                            In the sprawling mega-city of Neo-Tokyo, a rogue samurai must navigate the treacherous underworld to uncover the truth about his past.
+                        </p>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">history</span> Last read: Ch. 42
+                        </span>
+<button class="bg-indigo-500 hover:bg-indigo-600 text-white font-label-lg text-label-lg px-4 py-2 rounded-[16px] transition-colors flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                            Resume
+                        </button>
+</div>
+</div>
+</article>
+<!-- Card 2 (Up to date) -->
+<article class="bg-[#121212] glass-edge rounded-[24px] overflow-hidden flex flex-col transition-transform hover:-translate-y-1 duration-300">
+<div class="relative aspect-[2/1] w-full grayscale-[20%] opacity-90">
+<img class="w-full h-full object-cover" data-alt="A moody, atmospheric digital painting of a gothic castle floating in a stormy sky. The scene is rendered with deep, inky shadows and stark white lightning strikes, perfectly fitting a high-end dark fantasy comic aesthetic on a deep black AMOLED background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmrBRXMboVEyhQsWJqMxI62Q11t1t928K77IRz_CwvxUcU89DuhhVEpALwLO6CDo0cezHL5Pyix9cYdVHrgIHtJLCgPeos6sble3zoAXwIh-qqntS0-frgP9aMXR3-Kwu8aBiJRz1pZKj7a32VoiVkHWXwka-cLyRK8BPWgUpff3_BDhGq_EueaRC4CQO7VtIwfKEJk0H1IaqtdAymHfyMma1U8cXfDKNTpfrB6C4cYnMUp4elaRFpladGAOgle6bq_F4b9p1HdjlH"/>
+<div class="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent"></div>
+</div>
+<div class="p-md flex-1 flex flex-col justify-between">
+<div>
+<div class="flex gap-2 mb-2">
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-[8px]">Fantasy</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1 line-clamp-1">Crimson Keep</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-4">
+                            The lords of the floating keep have remained silent for a century, until a lone messenger arrives bearing ill tidings.
+                        </p>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">check_circle</span> Up to date (Ch. 12)
+                        </span>
+<button class="border border-outline-variant hover:border-primary text-primary font-label-lg text-label-lg px-4 py-2 rounded-[16px] transition-colors flex items-center gap-2 active:scale-95">
+                            Read
+                        </button>
+</div>
+</div>
+</article>
+<!-- Card 3 (New Chapters) -->
+<article class="bg-[#121212] glass-edge rounded-[24px] overflow-hidden flex flex-col transition-transform hover:-translate-y-1 duration-300">
+<div class="relative aspect-[2/1] w-full">
+<img class="w-full h-full object-cover" data-alt="A dynamic, stylized illustration of a high-speed mecha chase sequence through a desert canyon. The colors are vivid, with intense teal and orange contrasts against deep black shadows, typical of a premium action comic layout designed for high-resolution displays." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4yZ3tCbGawYQUOKTlj18LRiGNl36tC3bxsT6jEUKnHS_JcSC4tp8oRZHioxNU82dPZWv6GGc1mquJFZrP6og_i90i_U5CbqKWjlX3os7wbgVsU8yY_bFo_OQGljDOe4ZxTADubwQ0EzId0f3bbRv50XbqwUFtgHBie4oYBLlqDjiNu3FAY89cLae0u77FxUPOc1mpgS3DtHq5gwjoeMc6q5Dq2uY3e4x-nijCtHVX-BGTDH3aP77Qvb-i5D6D6a1ExMqKuSjmUfJv"/>
+<div class="absolute top-sm right-sm bg-error text-on-error font-label-sm text-label-sm px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">notifications_active</span>
+                        1 New Chapter
+                    </div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent"></div>
+</div>
+<div class="p-md flex-1 flex flex-col justify-between">
+<div>
+<div class="flex gap-2 mb-2">
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-[8px]">Mecha</span>
+<span class="bg-primary/15 text-primary font-label-sm text-label-sm px-2 py-1 rounded-[8px]">Drama</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1 line-clamp-1">Steel Horizons</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-4">
+                            Pilots of the frontier push their machines to the limit in illegal canyon races, risking everything for a ticket to the core worlds.
+                        </p>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">history</span> Last read: Ch. 8
+                        </span>
+<button class="bg-indigo-500 hover:bg-indigo-600 text-white font-label-lg text-label-lg px-4 py-2 rounded-[16px] transition-colors flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                            Resume
+                        </button>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Visible on Mobile, hidden on larger screens if desired, but kept per instructions for standard nav) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface-container-lowest/80 dark:bg-surface-container-lowest/80 backdrop-blur-2xl border-t border-outline-variant/10 md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 px-2 py-1" href="#">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 px-2 py-1" href="#">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">download_for_offline</span>
+<span class="font-label-sm text-label-sm mt-1">Downloads</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 px-2 py-1" href="#">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">auto_stories</span>
+<span class="font-label-sm text-label-sm mt-1">Library</span>
+</a>
+<!-- Active Navigation -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1 hover:bg-surface-variant/30 transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined filled-icon">favorite</span>
+<span class="font-label-sm text-label-sm mt-1 font-bold">Favorites</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 rounded-full transition-all active:scale-90 duration-150 px-2 py-1" href="#">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">settings</span>
+<span class="font-label-sm text-label-sm mt-1">Settings</span>
+</a>
+</nav>
+</body></html>
