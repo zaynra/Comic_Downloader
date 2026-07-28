@@ -2,8 +2,10 @@ import 'package:dio/dio.dart';
 
 class RemoteDataSource {
   late final Dio _dio;
+  String? _referer;
 
-  RemoteDataSource({int maxWorkers = 6}) {
+  RemoteDataSource({int maxWorkers = 6, String? referer}) {
+    _referer = referer;
     _dio = Dio(BaseOptions(
       headers: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 14) '
@@ -12,7 +14,12 @@ class RemoteDataSource {
       },
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 15),
     ));
+  }
+
+  void setReferer(String referer) {
+    _referer = referer;
   }
 
   Future<String> fetchHtml(String url) async {
@@ -28,24 +35,33 @@ class RemoteDataSource {
     return response.data!;
   }
 
-  Future<bool> downloadToFile(String url, String filePath) async {
-    try {
-      await _dio.download(url, filePath);
-      return true;
-    } catch (_) {
-      return false;
-    }
+  Future<void> downloadToFile(String url, String filePath, {String? referer}) async {
+    await _dio.download(
+      url,
+      filePath,
+      options: Options(
+        headers: {
+          if (referer != null) 'Referer': referer,
+          if (_referer != null && referer == null) 'Referer': _referer,
+        },
+      ),
+    );
   }
 
   Future<List<bool>> downloadBatch(List<(String, String)> tasks) async {
     final results = <bool>[];
     for (final (url, path) in tasks) {
-      final ok = await downloadToFile(url, path);
-      results.add(ok);
-      if (!ok) {
+      try {
+        await downloadToFile(url, path);
+        results.add(true);
+      } catch (_) {
         await Future.delayed(const Duration(milliseconds: 500));
-        final retryOk = await downloadToFile(url, path);
-        results[results.length - 1] = retryOk;
+        try {
+          await downloadToFile(url, path);
+          results.add(true);
+        } catch (_) {
+          results.add(false);
+        }
       }
     }
     return results;

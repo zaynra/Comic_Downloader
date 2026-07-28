@@ -5,7 +5,6 @@ import '../../domain/models/download_job.dart';
 import '../services/download_engine.dart';
 import '../services/notification_service.dart';
 import '../services/foreground_service.dart';
-import '../../core/utils/chapter_format.dart';
 
 class DownloadRepository {
   final List<DownloadJob> _jobs = [];
@@ -105,15 +104,10 @@ class DownloadRepository {
     required String seriesUrl,
     required String seriesTitle,
     required String adapterName,
-    required List<double> chapterNumbers,
+    required List<Chapter> chapters,
     required String outputFolder,
   }) async {
     await _ensureEngineStarted();
-
-    final chapters = chapterNumbers.map((chNum) {
-      final label = formatChapterLabel(chNum);
-      return Chapter(number: chNum, url: '', label: label);
-    }).toList();
 
     final job = DownloadJob(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -144,6 +138,8 @@ class DownloadRepository {
         'seriesTitle': job.seriesTitle,
         'adapterName': job.adapterName,
         'chapterNumbers': job.chapters.map((c) => c.number).toList(),
+        'chapterUrls': job.chapters.map((c) => c.url).toList(),
+        'chapterLabels': job.chapters.map((c) => c.label).toList(),
         'outputFolder': job.outputFolder,
       },
     ));

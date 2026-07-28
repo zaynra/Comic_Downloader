@@ -10,6 +10,36 @@ class NotificationService {
 
   Future<void> init() async {
     if (_initialized) return;
+
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'download_foreground',
+          'Layanan Unduh',
+          description: 'Notifikasi foreground untuk unduhan komik',
+          importance: Importance.low,
+        ),
+      );
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'download_channel',
+          'Unduhan',
+          description: 'Progress unduhan komik',
+          importance: Importance.low,
+        ),
+      );
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'download_error_channel',
+          'Error Unduhan',
+          description: 'Notifikasi error unduhan komik',
+          importance: Importance.high,
+        ),
+      );
+    }
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,

@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/utils/cleaner.dart';
@@ -18,6 +20,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   int _retryCount = 3;
   String _outputFolder = '';
   bool _cleaning = false;
+  String? _cleanResult;
 
   @override
   void initState() {
@@ -35,32 +38,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _pickFolder() async {
-    final controller = TextEditingController(text: _outputFolder);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Folder Output'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Masukkan path folder',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(_), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(_, controller.text),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Pilih folder penyimpanan output',
     );
-
     if (result != null && result.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('output_folder', result);
       setState(() => _outputFolder = result);
+    }
+  }
+
+  Future<void> _openFolder() async {
+    if (_outputFolder.isEmpty) return;
+    try {
+      await Process.run('explorer', [_outputFolder]);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tidak bisa membuka folder: $_outputFolder')),
+      );
     }
   }
 
@@ -72,19 +67,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    setState(() => _cleaning = true);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Bersihkan File Sementara?'),
+        content: Text(
+          'Tindakan ini akan menghapus file banner/iklan dari folder:\n'
+          '$_outputFolder\n\n'
+          'File chapter tidak akan dihapus. Lanjutkan?'
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Bersihkan')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() { _cleaning = true; _cleanResult = null; });
 
     try {
       final result = await ImageCleaner.cleanDirectory(_outputFolder, dryRun: false);
       if (!mounted) return;
+      setState(() {
+        _cleanResult = '${result.totalDeleted} file sementara dihapus';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${result.totalDeleted} file sementara dihapus'),
+          content: Text('${result.totalDeleted} file dihapus'),
           backgroundColor: AppColors.secondary,
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      setState(() { _cleanResult = 'Gagal: ${e.toString().length > 80 ? e.toString().substring(0, 80) : e.toString()}'; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal: $e'), backgroundColor: AppColors.error),
       );
@@ -109,7 +125,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _SettingsTile(
             icon: Icons.palette_outlined,
             title: 'Tema',
-            subtitle: 'Gelap',
+            subtitle: 'Gelap (Material 3)',
           ),
           const SizedBox(height: AppDimensions.spacingLg),
           _SectionHeader(title: 'Unduhan', textTheme: textTheme),
@@ -117,36 +133,72 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             icon: Icons.moving_outlined,
             title: 'Paralel download maks.',
             subtitle: '$_parallelDownloads',
-            onTap: () => _showEditDialog(
-              'Paralel Download', _parallelDownloads, (v) {
-              setState(() => _parallelDownloads = v);
-              SharedPreferences.getInstance().then((p) => p.setInt('max_parallel', v));
-            },
+            onTap: () => _showSliderDialog(
+              'Paralel Download', _parallelDownloads, 1, 10,
+              (v) {
+                setState(() => _parallelDownloads = v);
+                SharedPreferences.getInstance().then((p) => p.setInt('max_parallel', v));
+              },
             ),
           ),
           _SettingsTile(
             icon: Icons.replay_outlined,
             title: 'Retry count',
             subtitle: '$_retryCount',
-            onTap: () => _showEditDialog(
-              'Retry Count', _retryCount, (v) {
-              setState(() => _retryCount = v);
-              SharedPreferences.getInstance().then((p) => p.setInt('retry_count', v));
-            },
+            onTap: () => _showSliderDialog(
+              'Retry Count', _retryCount, 0, 10,
+              (v) {
+                setState(() => _retryCount = v);
+                SharedPreferences.getInstance().then((p) => p.setInt('retry_count', v));
+              },
             ),
           ),
           const SizedBox(height: AppDimensions.spacingLg),
           _SectionHeader(title: 'Penyimpanan', textTheme: textTheme),
-          _SettingsTile(
-            icon: Icons.folder_outlined,
-            title: 'Folder output',
-            subtitle: _outputFolder.isNotEmpty ? _outputFolder : 'Atur folder penyimpanan',
-            onTap: _pickFolder,
+          Card(
+            margin: const EdgeInsets.only(bottom: AppDimensions.spacingXs),
+            child: ListTile(
+              leading: const Icon(Icons.folder_outlined, color: AppColors.primary),
+              title: const Text('Folder output'),
+              subtitle: Text(
+                _outputFolder.isNotEmpty
+                    ? (_outputFolder.length > 50
+                        ? '...${_outputFolder.substring(_outputFolder.length - 50)}'
+                        : _outputFolder)
+                    : 'Atur folder penyimpanan',
+                maxLines: 2, overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_outputFolder.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.folder_open_outlined, size: 20),
+                      tooltip: 'Buka folder',
+                      onPressed: _openFolder,
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Pilih folder',
+                    onPressed: _pickFolder,
+                  ),
+                ],
+              ),
+              onTap: _pickFolder,
+            ),
           ),
+          if (_outputFolder.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 4, top: 4),
+              child: Text('Folder: $_outputFolder',
+                  style: textTheme.labelSmall?.copyWith(color: AppColors.onSurfaceVariant)),
+            ),
           _SettingsTile(
             icon: _cleaning ? Icons.hourglass_top : Icons.cleaning_services_outlined,
             title: 'Bersihkan File Sementara',
-            subtitle: _cleaning ? 'Membersihkan...' : 'Hapus file banner/iklan sisa download',
+            subtitle: _cleaning
+                ? 'Membersihkan...'
+                : (_cleanResult ?? 'Hapus file banner/iklan sisa download'),
             onTap: _cleaning ? null : _runCleaner,
           ),
           const SizedBox(height: AppDimensions.spacingLg),
@@ -159,40 +211,44 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: AppDimensions.spacingLg),
           _SectionHeader(title: 'Tentang', textTheme: textTheme),
-          _SettingsTile(
-            icon: Icons.info_outline,
-            title: 'Versi',
-            subtitle: '1.0.0',
-          ),
+          _SettingsTile(icon: Icons.info_outline, title: 'Versi', subtitle: '1.0.0'),
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  void _showEditDialog(String title, int current, void Function(int) onSave) {
-    final controller = TextEditingController(text: current.toString());
+  void _showSliderDialog(String title, int current, int min, int max, void Function(int) onSave) {
+    double val = current.toDouble();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Nilai'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(_), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
-              final v = int.tryParse(controller.text);
-              if (v != null && v > 0) {
-                onSave(v);
-                Navigator.pop(_);
-              }
-            },
-            child: const Text('Simpan'),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Nilai: ${val.toInt()}', style: Theme.of(ctx).textTheme.headlineMedium),
+              const SizedBox(height: 16),
+              Slider(
+                value: val,
+                min: min.toDouble(),
+                max: max.toDouble(),
+                divisions: max - min,
+                activeColor: AppColors.primary,
+                label: val.toInt().toString(),
+                onChanged: (v) => setDialogState(() => val = v),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            FilledButton(
+              onPressed: () { onSave(val.toInt()); Navigator.pop(ctx); },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -231,7 +287,7 @@ class _SettingsTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title),
-        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
         onTap: onTap,
       ),
