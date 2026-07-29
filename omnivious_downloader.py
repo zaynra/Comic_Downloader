@@ -1546,6 +1546,36 @@ def _extract_base_title(title):
     return t.strip()
 
 
+def _extract_artist(title):
+    m = re.match(r'^\[(.+?)\]', title)
+    return m.group(1).strip() if m else None
+
+
+def _detect_search_mode(gallery_list):
+    artists = {}
+    base_titles = set()
+    total = len(gallery_list)
+
+    for _, title in gallery_list:
+        artist = _extract_artist(title)
+        if artist:
+            artists[artist] = artists.get(artist, 0) + 1
+        base = _extract_base_title(title)
+        base_titles.add(base.lower())
+
+    if not artists:
+        return ('title', None)
+
+    top_artist = max(artists, key=artists.get)
+    top_count = artists[top_artist]
+    top_ratio = top_count / total
+
+    if top_ratio > 0.5 and len(base_titles) > 1:
+        return ('artist', top_artist)
+
+    return ('title', None)
+
+
 def is_image_file(filepath):
     try:
         with Image.open(filepath) as img:
@@ -1964,7 +1994,7 @@ class StreamingPDFDownloader:
         except Exception as e:
             return {"success": False, "pages": 0, "total": 0, "size_mb": 0.0, "error": str(e)}
 
-    def _download_gallery_item(self, adapter, gallery_url, driver):
+    def _download_gallery_item(self, adapter, gallery_url, driver, force_folder=None):
         tmp_folder = tempfile.mkdtemp(prefix=f"gallery_")
         try:
             item_title = adapter.get_item_title(gallery_url)
@@ -1996,10 +2026,13 @@ class StreamingPDFDownloader:
                 gid = gid_m.group(1) if gid_m else "?"
                 print(f"      [INFO] Hanya {pages_ok}/{total_pages} halaman. Cek: https://cin.cx/v/{gid}")
 
-            base_title = _extract_base_title(item_title)
-            if not base_title:
-                base_title = title_clean
-            base_title_clean = self.core.clean_name(base_title)
+            if force_folder:
+                base_title_clean = force_folder
+            else:
+                base_title = _extract_base_title(item_title)
+                if not base_title:
+                    base_title = title_clean
+                base_title_clean = self.core.clean_name(base_title)
 
             base_folder = os.path.join("Komik", base_title_clean)
             os.makedirs(base_folder, exist_ok=True)
@@ -2269,23 +2302,61 @@ class StreamingPDFDownloader:
         for i, gallery_url in enumerate(items, 1):
             title = adapter.get_item_title(gallery_url)
             gallery_list.append((gallery_url, title))
-            print(f"  [{i:3d}] {title or f'Gallery {adapter.get_chapter_num(gallery_url)}'}")
 
-        print(f"\n[INFO] Total {total_items} gallery ditemukan.")
-        range_input = input("Range yang mau di download (contoh: 1-5, 1,3,5, atau Enter untuk semua): ").strip()
-
-        selected_indices = set()
-        if not range_input:
-            selected_indices = set(range(total_items))
+        mode, mode_value = _detect_search_mode(gallery_list)
+        if mode == 'artist':
+            mode_clean = self.core.clean_name(mode_value)
+            print(f"[INFO] Mode     : Artist Search — semua gallery di folder '{mode_clean}'")
         else:
-            for part in range_input.split(','):
+            mode_clean = None
+
+        PAGE_SIZE = 20
+        selected_indices = set()
+        current_page = 0
+        total_pages = (total_items + PAGE_SIZE - 1) // PAGE_SIZE
+
+        while not selected_indices:
+            start = current_page * PAGE_SIZE
+            end = min(start + PAGE_SIZE, total_items)
+
+            print(f"\n--- Page {current_page+1}/{total_pages} ({total_items} gallery) ---")
+            for local_idx, global_idx in enumerate(range(start, end), start=1):
+                _, title = gallery_list[global_idx]
+                display = title or f"Gallery_{adapter.get_chapter_num(gallery_list[global_idx][0])}"
+                print(f"  [{global_idx+1:3d}] {display}")
+
+            prompt_suffix = " (Enter=next, p=prev, q=quit): "
+            if total_pages == 1:
+                prompt_suffix = ": "
+            elif current_page == total_pages - 1:
+                prompt_suffix = " (Enter=next=range, p=prev, q=quit): "
+
+            user_input = input(f"Range yang mau di download{ prompt_suffix}").strip().lower()
+
+            if user_input == 'q':
+                print("[INFO] Dibatalkan oleh user.")
+                return {"total": 0, "success": 0, "failed": 0, "cancelled": True, "pdfs": []}
+            elif user_input == 'p' and current_page > 0:
+                current_page -= 1
+                continue
+            elif user_input == '':
+                if current_page < total_pages - 1:
+                    current_page += 1
+                    continue
+                else:
+                    selected_indices = set(range(total_items))
+                    break
+
+            for part in user_input.split(','):
                 part = part.strip()
+                if not part:
+                    continue
                 if '-' in part:
                     parts = part.split('-')
                     try:
-                        start = int(parts[0]) - 1
-                        end = int(parts[1]) if parts[1] else total_items
-                        selected_indices.update(range(start, min(end, total_items)))
+                        s = int(parts[0]) - 1
+                        e = int(parts[1]) if parts[1].strip() else total_items
+                        selected_indices.update(range(max(0, s), min(e, total_items)))
                     except ValueError:
                         pass
                 else:
@@ -2296,9 +2367,8 @@ class StreamingPDFDownloader:
                     except ValueError:
                         pass
 
-        if not selected_indices:
-            print("[WARN] Tidak ada gallery dipilih.")
-            return {"total": 0, "success": 0, "failed": 0, "cancelled": False, "pdfs": []}
+            if not selected_indices:
+                print("[WARN] Input tidak valid. Coba lagi.")
 
         selected = [(items[i], gallery_list[i][1]) for i in sorted(selected_indices)]
         total = len(selected)
@@ -2326,7 +2396,7 @@ class StreamingPDFDownloader:
                 print(f"\n  [{idx}/{total}] Gallery")
                 print(f"  {'-'*28}")
 
-                pdf_path, dl_mb = self._download_gallery_item(adapter, gallery_url, driver)
+                pdf_path, dl_mb = self._download_gallery_item(adapter, gallery_url, driver, force_folder=mode_clean)
 
                 if self._cancel_event.is_set():
                     break
