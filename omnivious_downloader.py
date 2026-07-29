@@ -1922,23 +1922,30 @@ class StreamingPDFDownloader:
                 except Exception:
                     pass
 
-            if stats['ok'] == 0 and 'i.nhentai.net' in valid_imgs[0]:
+            if stats['ok'] < total:
                 for alt_ext in fallback_exts:
                     alt_tasks = []
                     for idx, src in enumerate(valid_imgs, 1):
+                        orig_path = os.path.join(dest_folder, f"{idx:03d}{orig_ext}")
+                        if os.path.isfile(orig_path):
+                            continue
                         base = os.path.splitext(src)[0]
                         alt_url = base + alt_ext
                         alt_path = os.path.join(dest_folder, f"{idx:03d}{alt_ext}")
                         alt_tasks.append((alt_url, alt_path))
+                    if not alt_tasks:
+                        break
                     alt_stats = self.core.download_images(alt_tasks)
-                    if alt_stats['ok'] > 0:
-                        for idx in range(1, total + 1):
-                            alt_path = os.path.join(dest_folder, f"{idx:03d}{alt_ext}")
-                            orig_path = os.path.join(dest_folder, f"{idx:03d}{orig_ext}")
-                            if os.path.isfile(alt_path) and not os.path.isfile(orig_path):
-                                shutil.move(alt_path, orig_path)
-                        stats['ok'] = alt_stats['ok']
-                        stats['size'] = alt_stats['size']
+                    moved = 0
+                    for idx in range(1, total + 1):
+                        alt_path = os.path.join(dest_folder, f"{idx:03d}{alt_ext}")
+                        orig_path = os.path.join(dest_folder, f"{idx:03d}{orig_ext}")
+                        if os.path.isfile(alt_path) and not os.path.isfile(orig_path):
+                            shutil.move(alt_path, orig_path)
+                            moved += 1
+                    stats['ok'] += moved
+                    stats['size'] += alt_stats['size']
+                    if stats['ok'] >= total:
                         break
 
             if stats['ok'] == 0:
@@ -1978,11 +1985,16 @@ class StreamingPDFDownloader:
 
             if not result.get("success"):
                 err_msg = result.get("error", "Unknown error")
-                sample = result.get("sample_url", "N/A")
                 print(f"      [ERROR] {err_msg}")
-                print(f"      [DEBUG] Sample URL (failed): {sample}")
                 self._cleanup_folder(tmp_folder)
                 return None, 0.0
+
+            total_pages = result.get("total", 0)
+            pages_ok = result.get("pages", 0)
+            if total_pages <= 3:
+                gid_m = re.search(r'/galleries/(\d+)', gallery_url)
+                gid = gid_m.group(1) if gid_m else "?"
+                print(f"      [INFO] Hanya {pages_ok}/{total_pages} halaman. Cek: https://cin.cx/v/{gid}")
 
             base_title = _extract_base_title(item_title)
             if not base_title:
@@ -2005,9 +2017,7 @@ class StreamingPDFDownloader:
             if ok and os.path.isfile(pdf_path):
                 pdf_size = os.path.getsize(pdf_path) / 1048576
                 dl_mb = result.get('size_mb', 0.0)
-                sample = result.get("sample_url", "N/A")
                 print(f"  PDF saved : {base_title_clean}/{pdf_name} ({pdf_size:.1f} MB)")
-                print(f"  [DEBUG] Sample URL (success): {sample}")
                 self._cleanup_folder(tmp_folder)
                 tmp_folder = None
                 return pdf_path, dl_mb
