@@ -1918,13 +1918,15 @@ class StreamingPDFDownloader:
 
             if stats['ok'] == 0:
                 sample = tasks[0][0] if tasks else "N/A"
-                return {"success": False, "pages": 0, "total": total, "size_mb": 0.0, "error": f"All image downloads failed. Sample URL: {sample}"}
+                return {"success": False, "pages": 0, "total": total, "size_mb": 0.0, "sample_url": sample, "error": "All image downloads failed"}
 
+            sample = tasks[0][0] if tasks else "N/A"
             return {
                 "success": True,
                 "pages": stats['ok'],
                 "total": total,
                 "size_mb": stats['size'] / 1048576,
+                "sample_url": sample,
             }
 
         except Exception as e:
@@ -1951,7 +1953,9 @@ class StreamingPDFDownloader:
 
             if not result.get("success"):
                 err_msg = result.get("error", "Unknown error")
+                sample = result.get("sample_url", "N/A")
                 print(f"      [ERROR] {err_msg}")
+                print(f"      [DEBUG] Sample URL (failed): {sample}")
                 self._cleanup_folder(tmp_folder)
                 return None, 0.0
 
@@ -1976,7 +1980,9 @@ class StreamingPDFDownloader:
             if ok and os.path.isfile(pdf_path):
                 pdf_size = os.path.getsize(pdf_path) / 1048576
                 dl_mb = result.get('size_mb', 0.0)
+                sample = result.get("sample_url", "N/A")
                 print(f"  PDF saved : {base_title_clean}/{pdf_name} ({pdf_size:.1f} MB)")
+                print(f"  [DEBUG] Sample URL (success): {sample}")
                 self._cleanup_folder(tmp_folder)
                 tmp_folder = None
                 return pdf_path, dl_mb
