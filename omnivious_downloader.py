@@ -148,6 +148,8 @@ class ComicDownloaderCore:
     def download_img(self, img_url, filepath, min_size=10240):
         try:
             r = self.session.get(img_url, timeout=15, stream=True)
+            if r.status_code != 200:
+                return False, 0
             r.raise_for_status()
             with open(filepath, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=16384):
@@ -158,7 +160,7 @@ class ComicDownloaderCore:
                 os.remove(filepath)
                 return False, 0
             return True, size
-        except Exception as e:
+        except Exception:
             return False, 0
 
     def _download_batch(self, tasks):
@@ -1893,6 +1895,15 @@ class StreamingPDFDownloader:
 
             if not valid_imgs:
                 return {"success": False, "pages": 0, "total": 0, "size_mb": 0.0, "error": "No images returned"}
+
+            first_url = valid_imgs[0]
+            try:
+                head = self.core.session.head(first_url, timeout=10, allow_redirects=False)
+                status = head.status_code
+            except Exception:
+                status = 0
+            if status != 200:
+                print(f"      [DEBUG] First image HTTP {status}: {first_url}")
 
             manifest = [{"page": idx, "url": src} for idx, src in enumerate(valid_imgs, 1)]
             try:
