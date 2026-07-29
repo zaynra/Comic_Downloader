@@ -1896,21 +1896,16 @@ class StreamingPDFDownloader:
             if not valid_imgs:
                 return {"success": False, "pages": 0, "total": 0, "size_mb": 0.0, "error": "No images returned"}
 
-            first_url = valid_imgs[0]
-            try:
-                head = self.core.session.head(first_url, timeout=10, allow_redirects=False)
-                status = head.status_code
-            except Exception:
-                status = 0
-            if status != 200:
-                print(f"      [DEBUG] First image HTTP {status}: {first_url}")
-
             manifest = [{"page": idx, "url": src} for idx, src in enumerate(valid_imgs, 1)]
             try:
                 with open(os.path.join(dest_folder, "chapter_manifest.json"), "w") as f:
                     json.dump(manifest, f, indent=4, ensure_ascii=False)
             except Exception:
                 pass
+
+            orig_ext = os.path.splitext(urllib.parse.urlparse(valid_imgs[0]).path)[1] or '.jpg'
+            fallback_exts = ['.webp', '.jpg', '.png', '.gif']
+            fallback_exts = [x for x in fallback_exts if x != orig_ext]
 
             tasks = []
             for idx, src in enumerate(valid_imgs, 1):
@@ -1926,6 +1921,25 @@ class StreamingPDFDownloader:
                     adapter.cleanup_chapter_folder(dest_folder)
                 except Exception:
                     pass
+
+            if stats['ok'] == 0 and 'i.nhentai.net' in valid_imgs[0]:
+                for alt_ext in fallback_exts:
+                    alt_tasks = []
+                    for idx, src in enumerate(valid_imgs, 1):
+                        base = os.path.splitext(src)[0]
+                        alt_url = base + alt_ext
+                        alt_path = os.path.join(dest_folder, f"{idx:03d}{alt_ext}")
+                        alt_tasks.append((alt_url, alt_path))
+                    alt_stats = self.core.download_images(alt_tasks)
+                    if alt_stats['ok'] > 0:
+                        for idx in range(1, total + 1):
+                            alt_path = os.path.join(dest_folder, f"{idx:03d}{alt_ext}")
+                            orig_path = os.path.join(dest_folder, f"{idx:03d}{orig_ext}")
+                            if os.path.isfile(alt_path) and not os.path.isfile(orig_path):
+                                shutil.move(alt_path, orig_path)
+                        stats['ok'] = alt_stats['ok']
+                        stats['size'] = alt_stats['size']
+                        break
 
             if stats['ok'] == 0:
                 sample = tasks[0][0] if tasks else "N/A"
